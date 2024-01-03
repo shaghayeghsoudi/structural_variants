@@ -55,4 +55,4 @@ java -jar ${SCRIPT}/picard.jar AddOrReplaceReadGroups \
       RGLB=lib1 \
       RGPL=ILLUMINA \
       RGPU=${SAMPLE_ID} \
-      RGSM=${SAMPLE_ID}
+      RGSM=${SAMPLE_ID} 2> ${SAMPLE_ID}.log
