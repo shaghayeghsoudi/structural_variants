@@ -31,7 +31,7 @@ source ~/anaconda3/etc/profile.d/conda.sh
 source activate /home/users/shsoudi/emoding/envs/picard
 
 module load java/17.0.4
-module load samtools/1.16.1
+#module load samtools/1.16.1
 
 ## Directories:
 # Locate the input data
