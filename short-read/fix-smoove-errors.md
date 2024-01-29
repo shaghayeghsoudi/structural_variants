@@ -73,4 +73,30 @@ The final split and disc bam files should be in the same directory as the smoove
 
 ## 4.RG error when RG is missing in BAM header
 
-  
+```
+load_entry_point('svtyper==0.7.0', 'console_scripts', 'svtyper')()
+File "/opt/conda/envs/smoove-env/lib/python2.7/site-packages/svtyper/classic.py", line 575, in cli
+sys.exit(main())
+File "/opt/conda/envs/smoove-env/lib/python2.7/site-packages/svtyper/classic.py", line 568, in main
+args.max_ci_dist)
+File "/opt/conda/envs/smoove-env/lib/python2.7/site-packages/svtyper/classic.py", line 150, in sv_genotype
+sample = Sample.from_bam(bam_list[i], num_samp, min_lib_prevalence)
+File "/opt/conda/envs/smoove-env/lib/python2.7/site-packages/svtyper/parsers.py", line 665, in from_bam
+name = bam.header['RG'][0]['SM']
+File "pysam/libcalignmentfile.pyx", line 548, in pysam.libcalignmentfile.AlignmentHeader.getitem
+KeyError: 'RG'
+panic: exit status 1
+```
+
+check if your bam/cram files have read-groups. If your BAM file does not have read roup you can use picard tools to add @RG tag
+
+```
+java -jar ${SCRIPT}/picard.jar AddOrReplaceReadGroups \
+      I=${INPUT_DIR}/${SAMPLE_ID}.rmdup1.bam \
+      O=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1.RG.bam \
+      RGID=${SAMPLE_ID} \
+      RGLB=lib1 \
+      RGPL=ILLUMINA \
+      RGPU=${SAMPLE_ID} \
+      RGSM=${SAMPLE_ID} 2> ${SAMPLE_ID}.log
+```
