@@ -67,7 +67,7 @@ library(plyr)
 ####### Process individual vcf-bedpe files - Illumina ########
 #############################################################
 
-### load bedpe files
+### load bedpe files (variants detected by each SV caller) 
 unmerged_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_structural_variants/short-read/downstream2/vcfs/filtered-bedfiles",pattern = "*.bed", full.names= TRUE) 
 
 
@@ -268,6 +268,45 @@ dev.off()
 
 
 
-###################################
-### survivir merged vcf file #####
-##################################
+#######################################
+### upset plot one match survivor #####
+#######################################
+
+
+### load matrix files 
+matrix<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_structural_variants/short-read/downstream2/vcfs/merged_survivor_1_match", pattern = "*.txt", full.names = TRUE,recursive=TRUE)
+
+
+matrix_tables<-lapply(matrix,function(x){
+    read.csv(x, header = FALSE, strip.white=T, sep='')
+})
+
+for (i in 1:length(matrix_tables)){
+    matrix_tables[[i]]<-cbind(matrix_tables[[i]],matrix[i])
+    }
+good_mat <- do.call("rbind", matrix_tables) 
+names(good_mat)[length(names(good_mat))]<-"raw_id"
+
+
+good_mat$sample_id<-sub('.*/\\s*', '', good_mat$raw_id)
+good_mat$sample_id<-gsub("survivor_merged_filtered_","",gsub("_overlapped_3ways_matrix.txt","",good_mat$sample_id))
+
+good_mat_fin<-good_mat%>%
+        separate(sample_id,c("sample","technology","minimum_SVLEN","distance"))
+
+
+good_mat_fin$sample <- gsub("1", "GCT",
+        gsub("2", "RD",
+        gsub("3", "SW982", type_data_good$sample)))
+
+
+names(good_mat_fin)[1:4]<-c("cuteSV","nanoSV","sniffles","svim")
+good_mat_fin<-good_mat_fin[,-5]
+
+
+
+vcf_matrix<-cbind(type_data_good,good_mat_fin)
+# columns to paste together
+all_samples<-unique(vcf_matrix$uniq_ID)
+
+
