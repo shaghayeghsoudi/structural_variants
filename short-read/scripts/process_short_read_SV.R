@@ -11,6 +11,7 @@ library(ggplot2)
 library(vcfR)
 library(StructuralVariantAnnotation)
 library(plyr)
+library(UpSetR)
 
 
 
@@ -268,9 +269,32 @@ dev.off()
 
 
 
-#######################################
-### upset plot one match survivor #####
-#######################################
+#########################################
+### upset plot "one match" survivor #####
+#########################################
+### merged vcf file 
+files_survivor<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_structural_variants/short-read/downstream2/vcfs/merged_survivor_1_match", pattern = "*.vcf", full.names = TRUE)
+
+### lead info field
+vcfs_survivor<-lapply(files_survivor,function(x){
+     #readVcf(x)
+     #info(readVcf(x))
+     data.frame(info(readVcf(x)))
+})
+
+
+for (i in 1:length(vcfs_survivor)){
+    vcfs_survivor[[i]]<-cbind(vcfs_survivor[[i]],files_survivor[i])
+    }
+type_data <- do.call("rbind", vcfs_survivor) 
+rownames(type_data)<-NULL
+names(type_data)[length(names(type_data))]<-"path"
+
+
+type_data_good<-type_data%>% 
+    mutate(sample=sub('.*/\\s*', '', gsub("_survivor_filt_merged_SVLEN100_DIS100_1match.vcf","",path)), )  %>% 
+    dplyr::select(-(path)) 
+
 
 
 ### load matrix files 
@@ -284,29 +308,51 @@ matrix_tables<-lapply(matrix,function(x){
 for (i in 1:length(matrix_tables)){
     matrix_tables[[i]]<-cbind(matrix_tables[[i]],matrix[i])
     }
-good_mat <- do.call("rbind", matrix_tables) 
-names(good_mat)[length(names(good_mat))]<-"raw_id"
+mat <- do.call("rbind", matrix_tables) 
+names(mat)[length(names(mat))]<-"raw_id"
 
 
-good_mat$sample_id<-sub('.*/\\s*', '', good_mat$raw_id)
-good_mat$sample_id<-gsub("survivor_merged_filtered_","",gsub("_overlapped_3ways_matrix.txt","",good_mat$sample_id))
-
-good_mat_fin<-good_mat%>%
-        separate(sample_id,c("sample","technology","minimum_SVLEN","distance"))
+mat_good<-mat%>% 
+    mutate(sample=sub('.*/\\s*', '', gsub("_survivor_filt_merged_SVLEN100_DIS100_1match_matrix.txt","",raw_id)), )  %>% 
+    dplyr::select(-(raw_id)) 
 
 
-good_mat_fin$sample <- gsub("1", "GCT",
-        gsub("2", "RD",
-        gsub("3", "SW982", type_data_good$sample)))
-
-
-names(good_mat_fin)[1:4]<-c("cuteSV","nanoSV","sniffles","svim")
-good_mat_fin<-good_mat_fin[,-5]
+names(mat_good)[1:3]<-c("delly","manta","smoove")
 
 
 
-vcf_matrix<-cbind(type_data_good,good_mat_fin)
+
+vcf_matrix<-cbind(type_data_good,mat_good)
 # columns to paste together
-all_samples<-unique(vcf_matrix$uniq_ID)
+all_samples<-unique(vcf_matrix$sample)
 
+
+
+for (jj in 1:length(all_samples)){
+
+
+      vcf_matrix_focal<-vcf_matrix[vcf_matrix$sample ==all_samples[jj],]
+
+      df_upset<-vcf_matrix_focal[,c("delly","manta","smoove")]
+
+      pdf(file = paste("~/Dropbox/cancer_reserach/sarcoma/sarcoma_structural_variants/short-read/downstream2/vcfs/upsetplot_SVcount_short_",all_samples[jj],".pdf",sep = ""),height= 8, width = 8)
+      upset(df_upset, main.bar.color = "brown3",
+      matrix.color="#299807", point.size=5,
+      number.angles = 30,
+      line.size = 1.5,
+      text.scale = c(1.3, 1.3, 1),
+      sets.bar.color=c("maroon","blue","orange"))
+      dev.off()
+
+
+} ### jj loop
+
+
+############
+#### END ###
+############
+
+
+######
+#### should move to long read-sequencing script (temporary here)
 
