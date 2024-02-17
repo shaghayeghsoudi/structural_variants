@@ -1,0 +1,4 @@
+We sequenced three Sarcoma cell-lines (GCT, RD and SW), using Illumina paired-end sequencing.
+
+## Quality Control Steps
+After demultiplexing the sequencing data, the first step of analysis was to ensure the sequences were high quality.
