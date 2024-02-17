@@ -1,6 +1,7 @@
 # Detecting structural varisnts using Illumina short read sequencing
 
 Original author: Shaghayegh Soudi
+
 Contributors: NA
 
 This repository contains the pipeline for processing the illumina short read sequencing to detect structural variants and scripts for processing the vcf file and downstream analysis and finally visualaizing the results. 
