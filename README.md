@@ -9,7 +9,7 @@ There are three Sarcoma cell-lines files as example dataset sequenced by both lo
 # Detecting structural varisnts using Illumina short read sequencing
 
 
-## Quality Control Steps
+## Quality Control 
 After demultiplexing the sequencing data, the workflow starts with quality control to ensure the sequences were high quality. two paired-end FASTQ files through a quality diagnostic and control pipeline.
 
 The pipeline is 
@@ -26,9 +26,12 @@ Other recommended trimming programs:
 - Trimmomatic
 - Scythe
 
+## Aligninh with BWA-MEM
+
 For Paired-end alignment pipeline uses ```BWA-mem```
 
 ```BWA-mem``` is recommended for high-quality queries as it is faster and more accurate and better performance.
+
 
 
 
