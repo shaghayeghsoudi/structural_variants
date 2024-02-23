@@ -56,18 +56,23 @@ rule run_BWA_and_sort
 
 rule mark_duplicated
 input:
-        "indexes/{genome}/{genome}.fa"
-        "out/_val_1.fq.gz"
-        "out/_val_2.fq.gz"
+        bam="aligned_reads.bam"
     output:
-        "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
+        bam_marked="aligned_reads_marked.bam",
+        metrics="duplication_metrics.txt"
     log:
-        "logs/indexes/{genome}/Bisulfite_Genome.log"
+        "logs/mark_duplicates.log"
     params:
         ""  # optional params string
-    wrapper:
-        bwa mem -t 10 ${FASTA} ${SAMPLE_NAME_R1} ${SAMPLE_NAME_R2} | samtools sort -o ${OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam
-
+   shell:
+        "java -jar ${SCRIPT}/picard.jar AddOrReplaceReadGroups \
+        I=${INPUT_DIR}/${SAMPLE_ID}.rmdup1.bam \
+        O=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1.RG.bam \
+        RGID=${SAMPLE_ID} \
+        RGLB=lib1 \
+        RGPL=ILLUMINA \
+        RGPU=${SAMPLE_ID} \
+        RGSM=${SAMPLE_ID} 2> ${SAMPLE_ID}.log"
 
 
 rule add_read_group
