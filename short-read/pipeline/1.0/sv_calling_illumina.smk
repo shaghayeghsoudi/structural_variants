@@ -141,3 +141,17 @@ rule run_delly:
         "envs/delly.yaml"  # Path to the Delly conda environment YAML file
     shell:
         "delly call -t {params.sv_type} -o {output.vcf} -g {input.reference} -x {input.bam}"         
+
+
+
+rule merge_sv_calls:
+    input:
+        vcf_files=expand("{sample}.vcf", sample=SAMPLES),
+    output:
+        merged_vcf="{output_dir}/merged_sv_calls.vcf"
+    params:
+        config="config.txt"  # Survivor configuration file
+    conda:
+        "envs/survivor.yaml"  # Path to the Survivor conda environment YAML file
+    shell:
+        "SURVIVOR merge {input.vcf_files} {params.config} 1000 1 1 1 1 {output.merged_vcf}"
