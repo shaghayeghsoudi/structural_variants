@@ -14,15 +14,18 @@ SAMPLES = glob_wildcards(config['data']+"/{sample}.fastq")
 
 rule run_fastQC_raw_fastq
     input:
-        "indexes/{genome}/{genome}.fa"
+        fastq="{sample}.fastq"
     output:
-        directory("indexes/{genome}/Bisulfite_Genome")
+        html="{sample}_fastqc.html",
+        zip="{sample}_fastqc.zip"
     log:
         "logs/indexes/{genome}/Bisulfite_Genome.log"
+    conda:
+        "envs/fastqc.yaml"    
     params:
-        ""  # optional params string
-    wrapper:
-        "v2.6.0/bio/bismark/bismark_genome_preparation"
+        threads=1 
+    shell:
+        "fastqc -o {output} -t {params.threads} {input.fastq}"
 
 
 
