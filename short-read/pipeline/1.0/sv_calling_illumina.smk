@@ -126,3 +126,18 @@ rule run_manta:
          runWorkflow.py -m local -j {params.threads} -g {params.memory} && \
          mv results/variants/diploidSV.vcf.gz {output.vcfs} && \
          mv results/variants/diploidSV.bedpe.gz {output.sv_bedpe}"
+
+
+rule run_delly:
+    input:
+        bam="{sample}.sorted.bam",
+        reference="genome.fa"
+    output:
+        vcf="{sample}.delly.vcf"
+    params:
+        threads=1,  # Number of threads to use, adjust as needed
+        sv_type="DEL"  # Structural variant type (e.g., DEL, DUP, INV, etc.)
+    conda:
+        "envs/delly.yaml"  # Path to the Delly conda environment YAML file
+    shell:
+        "delly call -t {params.sv_type} -o {output.vcf} -g {input.reference} -x {input.bam}"         
