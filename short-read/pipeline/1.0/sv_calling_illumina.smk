@@ -11,7 +11,6 @@ SAMPLES = glob_wildcards(config['data']+"/{sample}.fastq")
 
 
 
-
 rule run_fastQC_raw_fastq
     input:
         fastq="{sample}.fastq"
@@ -31,15 +30,19 @@ rule run_fastQC_raw_fastq
 
 rule run_Trim_Galore
     input:
-        "indexes/{genome}/{genome}.fa"
+        forward="{sample}_R1.fastq.gz",
+        reverse="{sample}_R2.fastq.gz"
     output:
-        directory("indexes/{genome}/Bisulfite_Genome")
-    log:
-        "logs/indexes/{genome}/Bisulfite_Genome.log"
+        forward_trimmed="{sample}_R1_trimmed.fq.gz",
+        reverse_trimmed="{sample}_R2_trimmed.fq.gz",
+        report="{sample}_trimming_report.txt"
     params:
-        ""  # optional params string
-    wrapper:
-        "v2.6.0/bio/bismark/bismark_genome_preparation"
+        adapter_options="--paired",  # Add additional options here if needed
+        threads=1  # Number of threads to use, adjust as needed
+    conda:
+        "envs/trim_galore.yaml"  # Path to the Trim Galore! conda environment YAML file
+    shell:
+        "trim_galore {params.adapter_options} -o ./ --paired {input.forward} {input.reverse} -o ./ --fastqc_args \"--threads {params.threads}\" 2> {output.report}"
 
 
 rule run_BWA_and_sort
@@ -58,7 +61,7 @@ rule run_BWA_and_sort
 
 
 rule mark_duplicated
-input:
+    input:
         bam="aligned_reads.bam"
     output:
         bam_marked="aligned_reads_marked.bam",
@@ -67,7 +70,7 @@ input:
         "logs/mark_duplicates.log"
     params:
         ""  # optional params string
-   shell:
+    shell:
         "java -jar ${SCRIPT}/picard.jar AddOrReplaceReadGroups \
         I=${INPUT_DIR}/${SAMPLE_ID}.rmdup1.bam \
         O=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1.RG.bam \
@@ -79,7 +82,7 @@ input:
 
 
 rule add_read_group
-input:
+    input:
         "indexes/{genome}/{genome}.fa"
         "out/_val_1.fq.gz"
         "out/_val_2.fq.gz"
@@ -95,22 +98,20 @@ input:
 
 
 rule samtools_index
-input:
-        "indexes/{genome}/{genome}.fa"
-        "out/_val_1.fq.gz"
-        "out/_val_2.fq.gz"
+    input:
+        bam="{sample}.sorted.bam"
     output:
-        "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
-    log:
-        "logs/indexes/{genome}/Bisulfite_Genome.log"
+        bai="{sample}.sorted.bam.bai"
     params:
-        ""  # optional params string
-    wrapper:
-        bwa mem -t 10 ${FASTA} ${SAMPLE_NAME_R1} ${SAMPLE_NAME_R2} | samtools sort -o ${OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam
+        threads=1  # Number of threads to use, adjust as needed
+    conda:
+        "envs/samtools.yaml"  # Path to the Samtools conda environment YAML file
+    shell:
+        "samtools index -@ {params.threads} {input.bam}"
 
 
 rule manta
-input:
+    input:
         "indexes/{genome}/{genome}.fa"
         "out/_val_1.fq.gz"
         "out/_val_2.fq.gz"
