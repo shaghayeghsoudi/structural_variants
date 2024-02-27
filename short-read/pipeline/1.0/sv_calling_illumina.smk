@@ -96,7 +96,6 @@ rule add_read_group
         bwa mem -t 10 ${FASTA} ${SAMPLE_NAME_R1} ${SAMPLE_NAME_R2} | samtools sort -o ${OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam
 
 
-
 rule samtools_index
     input:
         bam="{sample}.sorted.bam"
@@ -110,16 +109,20 @@ rule samtools_index
         "samtools index -@ {params.threads} {input.bam}"
 
 
-rule manta
+rule run_manta:
     input:
-        "indexes/{genome}/{genome}.fa"
-        "out/_val_1.fq.gz"
-        "out/_val_2.fq.gz"
+        bam="{sample}.sorted.bam",
+        config="manta_config.ini"
     output:
-        "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
-    log:
-        "logs/indexes/{genome}/Bisulfite_Genome.log"
+        vcfs="{sample}_manta.vcf.gz",
+        sv_bedpe="{sample}_manta_sv.bedpe.gz"
     params:
-        ""  # optional params string
-    wrapper:
-        bwa mem -t 10 ${FASTA} ${SAMPLE_NAME_R1} ${SAMPLE_NAME_R2} | samtools sort -o ${OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam
+        threads=1,  # Number of threads to use, adjust as needed
+        memory=8  # Memory in GB, adjust as needed
+    conda:
+        "envs/manta.yaml"  # Path to the Manta conda environment YAML file
+    shell:
+        "configManta.py --bam {input.bam} --config {input.config} --callRegions {params.threads} --callMemMb {params.memory * 1000} && \
+         runWorkflow.py -m local -j {params.threads} -g {params.memory} && \
+         mv results/variants/diploidSV.vcf.gz {output.vcfs} && \
+         mv results/variants/diploidSV.bedpe.gz {output.sv_bedpe}"
