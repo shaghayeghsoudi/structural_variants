@@ -183,3 +183,13 @@ rule merge_sv_calls:
         "envs/survivor.yaml"  # Path to the Survivor conda environment YAML file
     shell:
         "SURVIVOR merge {input.vcf_files} {params.config} 1000 1 1 1 1 {output.merged_vcf}"
+
+
+rule visualization
+rule run_r_script:
+    input:
+        "input.txt"
+    output:
+        "output.txt"
+    script:
+        "my_analysis.R"
