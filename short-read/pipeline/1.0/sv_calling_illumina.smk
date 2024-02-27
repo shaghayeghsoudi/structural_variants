@@ -10,6 +10,19 @@ configfile:
 SAMPLES = glob_wildcards(config['data']+"/{sample}.fastq")
 
 
+rule bam_to_fastq:
+    input:
+        bam="{sample}.sorted.bam"
+    output:
+        fastq1="{sample}_R1.fastq.gz",
+        fastq2="{sample}_R2.fastq.gz"
+    params:
+        threads=1  # Number of threads to use, adjust as needed
+    conda:
+        "envs/samtools.yaml"  # Path to the Samtools conda environment YAML file
+    shell:
+        "bamtofastq filename={input.bam} F={output.fastq1} F2={output.fastq2} gz=1 threads={params.threads}"
+
 
 rule run_fastQC_raw_fastq
     input:
