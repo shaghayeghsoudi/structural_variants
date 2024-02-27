@@ -140,8 +140,36 @@ rule run_delly:
     conda:
         "envs/delly.yaml"  # Path to the Delly conda environment YAML file
     shell:
-        "delly call -t {params.sv_type} -o {output.vcf} -g {input.reference} -x {input.bam}"         
+        "delly call -t {params.sv_type} -o {output.vcf} -g {input.reference} -x {input.bam}"  
 
+
+rule run_smoove:
+    input:
+        bam="{sample}.sorted.bam",
+        reference="genome.fa"
+    output:
+        vcf="{sample}.smoove.vcf"
+    params:
+        threads=1  # Number of threads to use, adjust as needed
+    conda:
+        "envs/smoove.yaml"  # Path to the Smoove conda environment YAML file
+    shell:
+        "smoove call -p {params.threads} -x --name {sample} -f {input.reference} -v {output.vcf} {input.bam}"               
+
+
+rule run_gridss:
+    input:
+        bam="{sample}.sorted.bam",
+        reference="genome.fa",
+        gridss_config="gridss_config.ini"
+    output:
+        vcf="{sample}.gridss.vcf"
+    params:
+        threads=1  # Number of threads to use, adjust as needed
+    conda:
+        "envs/gridss.yaml"  # Path to the Gridss conda environment YAML file
+    shell:
+        "gridss --somatic -o {output.vcf} -r {input.reference} -b {input.bam} -v {input.gridss_config} --threads {params.threads}"
 
 
 rule merge_sv_calls:
