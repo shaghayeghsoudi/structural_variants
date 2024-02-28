@@ -10,26 +10,15 @@ configfile:
 SAMPLES = glob_wildcards(config['data']+"/{sample}.fastq")
 
 
-rule bam_to_fastq:
-    input:
-        bam="{sample}.sorted.bam"
-    output:
-        fastq1="{sample}_R1.fastq.gz",
-        fastq2="{sample}_R2.fastq.gz"
-    params:
-        threads=1  # Number of threads to use, adjust as needed
-    conda:
-        "envs/samtools.yaml"  # Path to the Samtools conda environment YAML file
-    shell:
-        "bamtofastq filename={input.bam} F={output.fastq1} F2={output.fastq2} gz=1 threads={params.threads}"
-
 
 rule run_fastQC_raw_fastq
     input:
-        fastq="{sample}.fastq"
+        R1="{sample}.R1_CTAGTAGC-CTAGTAGC_fastq.zip",
+        R2="{sample}.R2_CTAGTAGC-CTAGTAGC_fastq.zip"
     output:
         html="{sample}_fastqc.html",
-        zip="{sample}_fastqc.zip"
+        zipR1="{sample}_R1_fastqc.zip",
+        zipR2="{sample}_R2_fastqc.zip",
     log:
         "logs/indexes/{genome}/Bisulfite_Genome.log"
     conda:
@@ -38,7 +27,6 @@ rule run_fastQC_raw_fastq
         threads=1 
     shell:
         "fastqc -o {output} -t {params.threads} {input.fastq}"
-
 
 
 rule run_Trim_Galore
