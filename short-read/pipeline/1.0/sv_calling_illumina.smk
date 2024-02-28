@@ -26,7 +26,7 @@ rule run_fastQC_raw_fastq
     params:
         threads=1 
     shell:
-        "fastqc -o {output} -t {params.threads} {input.fastq}"
+        "fastqc -o {output} -t {params.threads} {input.R1} {input.R2}"
 
 
 rule run_Trim_Galore
