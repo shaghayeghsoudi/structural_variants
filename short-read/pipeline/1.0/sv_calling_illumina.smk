@@ -49,21 +49,21 @@ rule _run_Trim_Galore
 rule _run_BWA_and_sort
     input:
         reference="indexes/{genome}/{genome}.fa"
-        fastq1=str(rules._run_Trim_Galore.output.forward_trimmed), 
-        fastq2=str(rules._run_Trim_Galore.output.reverse_trimmed), 
+        fastqR1=str(rules._run_Trim_Galore.output.forward_trimmed), 
+        fastqR2=str(rules._run_Trim_Galore.output.reverse_trimmed)
     output:
-        "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
+        bam="{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
     params:
         threads=4    
     log:
         "logs/indexes/{genome}/Bisulfite_Genome.log"
     shell:
-        "bwa mem -t {params.threads} {input.reference} {fastq1} {fastq2} | samtools sort -o {output}
+        "bwa mem -t {params.threads} {input.reference} {fastqR1} {fastqR2} | samtools sort -o {output}
 
 
 rule mark_duplicated
     input:
-        bam="aligned_reads.bam"
+        bam=str(rules._run_BWA_and_sort.output.bam)
     output:
         bam_marked="aligned_reads_marked.bam",
         metrics="duplication_metrics.txt"
