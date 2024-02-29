@@ -29,10 +29,10 @@ rule run_fastQC_raw_fastq
         "fastqc -o {output} -t {params.threads} {input.R1} {input.R2}"
 
 
-rule run_Trim_Galore
+rule _run_Trim_Galore
     input:
-        forward="{sample}_R1.fastq.gz",
-        reverse="{sample}_R2.fastq.gz"
+        forward="{sample}.R1_CTAGTAGC-CTAGTAGC_fastq.zip",
+        reverse="{sample}.R2_CTAGTAGC-CTAGTAGC_fastq.zip"
     output:
         forward_trimmed="{sample}_R1_trimmed.fq.gz",
         reverse_trimmed="{sample}_R2_trimmed.fq.gz",
@@ -46,11 +46,11 @@ rule run_Trim_Galore
         "trim_galore {params.adapter_options} -o ./ --paired {input.forward} {input.reverse} -o ./ --fastqc_args \"--threads {params.threads}\" 2> {output.report}"
 
 
-rule run_BWA_and_sort
+rule _run_BWA_and_sort
     input:
         reference="indexes/{genome}/{genome}.fa"
-        fastq1="sample.fastq"
-        fastq2="sample.fastq"
+        fastq1=str(rules._run_Trim_Galore.output.forward_trimmed), 
+        fastq2=str(rules._run_Trim_Galore.output.reverse_trimmed), 
     output:
         "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
     params:
