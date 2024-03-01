@@ -88,7 +88,7 @@ rule _add_read_group
     output:
         "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
     log:
-        "logs/indexes/{genome}/Bisulfite_Genome.log"
+        bam="logs/indexes/{genome}/Bisulfite_Genome.log"
     conda:
         "envs/samtools.yaml"  # Path to the Samtools conda environment YAML file    
     params:
@@ -104,9 +104,9 @@ rule _add_read_group
         RGSM=${SAMPLE_ID} 2> ${SAMPLE_ID}.log"
 
 
-rule samtools_index
+rule _samtools_index
     input:
-        bam=bam=str(rules._run_BWA_and_sort.output.bam)
+        bam=str(rules._add_read_group.output.bam)
     output:
         bai="{sample}.sorted.bam.bai"
     params:
@@ -117,16 +117,16 @@ rule samtools_index
         "samtools index -@ {params.threads} {input.bam}"
 
 
-rule run_manta:
+rule _run_manta:
     input:
-        bam="{sample}.sorted.bam",
+        bam=str(rules._add_read_group.output.bam),
         config="manta_config.ini"
     output:
         vcfs="{sample}_manta.vcf.gz",
         sv_bedpe="{sample}_manta_sv.bedpe.gz"
     params:
         threads=1,  # Number of threads to use, adjust as needed
-        memory=8  # Memory in GB, adjust as needed
+        script = /home/users/shsoudi/emoding/envs/manta/bin
     conda:
         "envs/manta.yaml"  # Path to the Manta conda environment YAML file
     shell:
@@ -136,7 +136,7 @@ rule run_manta:
          mv results/variants/diploidSV.bedpe.gz {output.sv_bedpe}"
 
 
-rule run_delly:
+rule _run_delly:
     input:
         bam="{sample}.sorted.bam",
         reference="genome.fa"
