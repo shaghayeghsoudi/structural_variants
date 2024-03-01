@@ -39,7 +39,7 @@ rule _run_Trim_Galore
         report="{sample}_trimming_report.txt"
     params:
         adapter_options="--paired",  # Add additional options here if needed
-        threads=1  # Number of threads to use, adjust as needed
+        threads=1 
     conda:
         "envs/trim_galore.yaml"  # Path to the Trim Galore! conda environment YAML file
     shell:
@@ -52,16 +52,16 @@ rule _run_BWA_and_sort
         fastqR1=str(rules._run_Trim_Galore.output.forward_trimmed), 
         fastqR2=str(rules._run_Trim_Galore.output.reverse_trimmed)
     output:
-        bam="{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
+        bam="{OUTPUT_DIR}/${sample}.sorted.bam"
     params:
         threads=4    
     log:
         "logs/indexes/{genome}/Bisulfite_Genome.log"
     shell:
-        "bwa mem -t {params.threads} {input.reference} {fastqR1} {fastqR2} | samtools sort -o {output}
+        "bwa mem -t {params.threads} {input.reference} {input.fastqR1} {input.fastqR2} | samtools sort -o {output}
 
 
-rule mark_duplicated
+rule _mark_duplicated
     input:
         bam=str(rules._run_BWA_and_sort.output.bam)
     output:
@@ -69,6 +69,28 @@ rule mark_duplicated
         metrics="duplication_metrics.txt"
     log:
         "logs/mark_duplicates.log"
+    params:
+        ""  # optional params string
+    shell:
+        "java -jar ${SCRIPT}/picard.jar MarkDuplicates \
+        I=${INPUT_DIR}/${SAMPLE_ID}.sorted.bam \
+        O=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1.bam \
+        M=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1_metrics.txt \
+        REMOVE_DUPLICATES=true \
+        VALIDATION_STRINGENCY=SILENT"
+
+
+rule _add_read_group
+    input:
+        "indexes/{genome}/{genome}.fa"
+        "out/_val_1.fq.gz"
+        "out/_val_2.fq.gz"
+    output:
+        "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
+    log:
+        "logs/indexes/{genome}/Bisulfite_Genome.log"
+    conda:
+        "envs/samtools.yaml"  # Path to the Samtools conda environment YAML file    
     params:
         ""  # optional params string
     shell:
@@ -82,24 +104,9 @@ rule mark_duplicated
         RGSM=${SAMPLE_ID} 2> ${SAMPLE_ID}.log"
 
 
-rule add_read_group
-    input:
-        "indexes/{genome}/{genome}.fa"
-        "out/_val_1.fq.gz"
-        "out/_val_2.fq.gz"
-    output:
-        "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
-    log:
-        "logs/indexes/{genome}/Bisulfite_Genome.log"
-    params:
-        ""  # optional params string
-    wrapper:
-        bwa mem -t 10 ${FASTA} ${SAMPLE_NAME_R1} ${SAMPLE_NAME_R2} | samtools sort -o ${OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam
-
-
 rule samtools_index
     input:
-        bam="{sample}.sorted.bam"
+        bam=bam=str(rules._run_BWA_and_sort.output.bam)
     output:
         bai="{sample}.sorted.bam.bai"
     params:
