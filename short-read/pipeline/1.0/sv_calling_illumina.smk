@@ -28,8 +28,9 @@ rule _run_fastQC_raw_fastq
         "envs/fastqc.yaml"    
     params:
         threads=1 
+        out_dir = /oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/fastQC_raw
     shell:
-        "fastqc -o {output} -t {params.threads} {input.fastq_1} {input.fastq_2} 2> {log.stderr}"
+        "fastqc -o -o {params.out_dir} -t {params.threads} {input.fastq_1} {input.fastq_2} 2> {log.stderr}"
 
 
 rule _run_Trim_Galore
