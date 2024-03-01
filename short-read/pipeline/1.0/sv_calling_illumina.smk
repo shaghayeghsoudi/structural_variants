@@ -21,16 +21,16 @@ rule _run_fastQC_raw_fastq
     output:
         html="{sample}_fastqc.html",
         zipfastq_1="{sample}_R1_fastqc.zip",
-        zipfastq_2="{sample}_R2_fastqc.zip",
+        zipfastq_2="{sample}_R2_fastqc.zip"
     log:
-        stderr ="logs/indexes/{genome}/fastqc_raw_stderr.log"
+        stderr ="logs/indexes/fastqc_raw_stderr.log"
     conda:
         "envs/fastqc.yaml"    
     params:
         threads=1 
         out_dir = /oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/fastQC_raw
     shell:
-        "fastqc -o -o {params.out_dir} -t {params.threads} {input.fastq_1} {input.fastq_2} 2> {log.stderr}"
+        "fastqc -o {params.out_dir} -t {params.threads} {input.fastq_1} {input.fastq_2} 2> {log.stderr}"
 
 
 rule _run_Trim_Galore
@@ -41,9 +41,13 @@ rule _run_Trim_Galore
         forward_trimmed="{sample}_R1_trimmed.fq.gz",
         reverse_trimmed="{sample}_R2_trimmed.fq.gz",
         report="{sample}_trimming_report.txt"
+    log:
+        stderr ="logs/indexes/fastqc_raw_stderr.log"    
     params:
         adapter_options="--paired",  # Add additional options here if needed
-        threads=1 
+        threads=3,
+        out_dir = /oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/trimmed_fastq,
+        CUTADAPT=/home/users/shsoudi/emoding/envs/trim-galore/bin/cutadapt
     conda:
         "envs/trim_galore.yaml"  # Path to the Trim Galore! conda environment YAML file
     shell:
