@@ -28,7 +28,7 @@ rule _run_fastQC_raw_fastq
         "envs/fastqc.yaml"    
     params:
         threads=1 
-        out_dir = /oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/fastQC_raw
+        out_dir = "/oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/fastQC_raw"
     shell:
         "fastqc -o {params.out_dir} -t {params.threads} {input.fastq_1} {input.fastq_2} 2> {log.stderr}"
 
@@ -46,34 +46,37 @@ rule _run_Trim_Galore
     params:
         adapter_options="--paired",  
         threads=3,
-        out_dir = /oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/trimmed_fastq,
-        CUTADAPT=/home/users/shsoudi/emoding/envs/trim-galore/bin/cutadapt
+        out_dir = "/oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/trimmed_fastq",
+        cutadapt_script="/home/users/shsoudi/emoding/envs/trim-galore/bin/cutadapt"
     conda:
-        "envs/trim_galore.yaml"  # Path to the Trim Galore! conda environment YAML file
+        "envs/trim_galore.yaml"  
     shell:
         "trim_galore --gzip \
-        --path_to_cutadapt {params.CUTADAPT} \
+        --path_to_cutadapt {params.cutadapt_script} \
         {params.adapter_options} \
         --output_dir {params.out_dir} \
         {input.forward} {input.reverse}  \
         --fastqc_args \
         --threads {params.threads} \
-        2> {output.report}"
+        2> {log.stderr}"
 
 
 rule _run_BWA_and_sort
     input:
-        reference="indexes/{genome}/{genome}.fa"
+        reference="/oak/stanford/groups/emoding/sequencing/pipeline/indices/hg19.fa"
         fastqR1=str(rules._run_Trim_Galore.output.forward_trimmed), 
         fastqR2=str(rules._run_Trim_Galore.output.reverse_trimmed)
     output:
         bam="{OUTPUT_DIR}/${sample}.sorted.bam"
+    conda:
+        "envs/bwa.yaml"    
     params:
-        threads=4    
+        threads=10,
+        out_dir = "/oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/alignment-BWA"
     log:
-        "logs/indexes/{genome}/Bisulfite_Genome.log"
+        stderr="logs/indexes/{genome}/bwa.log"
     shell:
-        "bwa mem -t {params.threads} {input.reference} {input.fastqR1} {input.fastqR2} | samtools sort -o {output}
+        "bwa mem -t {params.threads} {input.reference} {input.fastqR1} {input.fastqR2} | samtools sort -o {params.out_dir}"
 
 
 rule _mark_duplicated
