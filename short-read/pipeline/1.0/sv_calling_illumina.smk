@@ -8,25 +8,28 @@ configfile:
     "config.yaml"
 
 SAMPLES = glob_wildcards(config['data']+"/{sample}.fastq")
+### READS= ["R1","R2"] ## try read this way?
 
 
+rule _symlink_fastq
 
-rule run_fastQC_raw_fastq
+
+rule _run_fastQC_raw_fastq
     input:
-        R1="{sample}.R1_CTAGTAGC-CTAGTAGC_fastq.zip",
-        R2="{sample}.R2_CTAGTAGC-CTAGTAGC_fastq.zip"
+        fastq_1="{sample}.R1_CTAGTAGC-CTAGTAGC_fastq.zip",
+        fastq_2="{sample}.R2_CTAGTAGC-CTAGTAGC_fastq.zip"
     output:
         html="{sample}_fastqc.html",
-        zipR1="{sample}_R1_fastqc.zip",
-        zipR2="{sample}_R2_fastqc.zip",
+        zipfastq_1="{sample}_R1_fastqc.zip",
+        zipfastq_2="{sample}_R2_fastqc.zip",
     log:
-        "logs/indexes/{genome}/Bisulfite_Genome.log"
+        stderr ="logs/indexes/{genome}/fastqc_raw_stderr.log"
     conda:
         "envs/fastqc.yaml"    
     params:
         threads=1 
     shell:
-        "fastqc -o {output} -t {params.threads} {input.R1} {input.R2}"
+        "fastqc -o {output} -t {params.threads} {input.fastq_1} {input.fastq_2} 2> {log.stderr}"
 
 
 rule _run_Trim_Galore
