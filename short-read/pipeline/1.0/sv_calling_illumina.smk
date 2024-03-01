@@ -44,14 +44,21 @@ rule _run_Trim_Galore
     log:
         stderr ="logs/indexes/fastqc_raw_stderr.log"    
     params:
-        adapter_options="--paired",  # Add additional options here if needed
+        adapter_options="--paired",  
         threads=3,
         out_dir = /oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/trimmed_fastq,
         CUTADAPT=/home/users/shsoudi/emoding/envs/trim-galore/bin/cutadapt
     conda:
         "envs/trim_galore.yaml"  # Path to the Trim Galore! conda environment YAML file
     shell:
-        "trim_galore {params.adapter_options} -o ./ --paired {input.forward} {input.reverse} -o ./ --fastqc_args \"--threads {params.threads}\" 2> {output.report}"
+        "trim_galore --gzip \
+        --path_to_cutadapt {params.CUTADAPT} \
+        {params.adapter_options} \
+        --output_dir {params.out_dir} \
+        {input.forward} {input.reverse}  \
+        --fastqc_args \
+        --threads {params.threads} \
+        2> {output.report}"
 
 
 rule _run_BWA_and_sort
