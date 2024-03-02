@@ -75,11 +75,11 @@ rule _run_BWA_and_sort
     params:
         threads=10,
     log:
-        stderr="logs/indexes/{genome}/bwa.log"
+        stderr="logs/indexes/BWA_stderr.log"
     shell:
         """
         bwa mem -t {params.threads} \
-        {input.reference} {input.fastqR1} {input.fastqR2} | samtools sort -o {output}.bam
+        {input.reference} {input.fastqR1} {input.fastqR2} | samtools sort -o {output}.bam 2> {log.stderr}
         """
 
 
@@ -90,17 +90,17 @@ rule _mark_duplicated
         bam_marked="aligned_reads_marked.bam",
         metrics="duplication_metrics.txt"
     log:
-        "logs/mark_duplicates.log"
+        stderr="logs/mark_duplicates.log"
     params:
-        ""  # optional params string
+        script="/home/users/shsoudi/emoding/envs/picard/share/picard-2.27.5-0"
     shell:
         """
-        java -jar ${SCRIPT}/picard.jar MarkDuplicates \
-        I=${INPUT_DIR}/${SAMPLE_ID}.sorted.bam \
+        java -jar {params.script}/picard.jar MarkDuplicates \
+        I={input.bam} \
         O=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1.bam \
         M=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1_metrics.txt \
         REMOVE_DUPLICATES=true \
-        VALIDATION_STRINGENCY=SILENT
+        VALIDATION_STRINGENCY=SILENT 2> {log.stderr}
         """
 
 
@@ -112,20 +112,22 @@ rule _add_read_group
     output:
         "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
     log:
-        bam="logs/indexes/{genome}/Bisulfite_Genome.log"
+        stderr="logs/indexes/{genome}/Bisulfite_Genome.log"
     conda:
         "envs/samtools.yaml"  # Path to the Samtools conda environment YAML file    
     params:
         ""  # optional params string
     shell:
-        "java -jar ${SCRIPT}/picard.jar AddOrReplaceReadGroups \
+        """
+        java -jar ${SCRIPT}/picard.jar AddOrReplaceReadGroups \
         I=${INPUT_DIR}/${SAMPLE_ID}.rmdup1.bam \
         O=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1.RG.bam \
         RGID=${SAMPLE_ID} \
         RGLB=lib1 \
         RGPL=ILLUMINA \
         RGPU=${SAMPLE_ID} \
-        RGSM=${SAMPLE_ID} 2> ${SAMPLE_ID}.log"
+        RGSM=${SAMPLE_ID} 2> ${log.stderr}
+        """
 
 
 rule _samtools_index
@@ -148,16 +150,20 @@ rule _run_manta:
     output:
         vcfs="{sample}_manta.vcf.gz",
         sv_bedpe="{sample}_manta_sv.bedpe.gz"
+    log:
+        stderr="logs/indexes/{genome}/Bisulfite_Genome.log"    
     params:
         threads=1,  # Number of threads to use, adjust as needed
         script = /home/users/shsoudi/emoding/envs/manta/bin
     conda:
         "envs/manta.yaml"  # Path to the Manta conda environment YAML file
     shell:
-        "configManta.py --bam {input.bam} --config {input.config} --callRegions {params.threads} --callMemMb {params.memory * 1000} && \
+        """
+        configManta.py --bam {input.bam} --config {input.config} --callRegions {params.threads} --callMemMb {params.memory * 1000} && \
          runWorkflow.py -m local -j {params.threads} -g {params.memory} && \
          mv results/variants/diploidSV.vcf.gz {output.vcfs} && \
-         mv results/variants/diploidSV.bedpe.gz {output.sv_bedpe}"
+         mv results/variants/diploidSV.bedpe.gz {output.sv_bedpe} 2> {log.stderr}
+         """
 
 
 rule _run_delly:
