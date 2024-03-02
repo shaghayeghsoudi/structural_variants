@@ -8,7 +8,7 @@ configfile:
     "config.yaml"
 
 SAMPLES = glob_wildcards(config['data']+"/{sample}.fastq")
-### READS= ["R1","R2"] ## try read this way?
+
 
 
 rule _symlink_fastq
@@ -67,7 +67,7 @@ rule _run_BWA_and_sort
         fastqR1=str(rules._run_Trim_Galore.output.forward_trimmed), 
         fastqR2=str(rules._run_Trim_Galore.output.reverse_trimmed)
     output:
-        bam="{OUTPUT_DIR}/${sample}.sorted.bam"
+        bam="{sample}/${sample}.sorted.bam"
     conda:
         "envs/bwa.yaml"    
     params:
@@ -76,7 +76,7 @@ rule _run_BWA_and_sort
     log:
         stderr="logs/indexes/{genome}/bwa.log"
     shell:
-        "bwa mem -t {params.threads} {input.reference} {input.fastqR1} {input.fastqR2} | samtools sort -o {params.out_dir}"
+        "bwa mem -t {params.threads} {input.reference} {input.fastqR1} {input.fastqR2} | samtools sort -o {params.out_dir}/${wildcards.sample}.sorted.bam"
 
 
 rule _mark_duplicated
@@ -100,8 +100,8 @@ rule _mark_duplicated
 
 rule _add_read_group
     input:
-        "indexes/{genome}/{genome}.fa"
-        "out/_val_1.fq.gz"
+        "indexes/{genome}/{genome}.fa",
+        "out/_val_1.fq.gz",
         "out/_val_2.fq.gz"
     output:
         "{OUTPUT_DIR}/${SAMPLE_ID}.sorted.bam"
