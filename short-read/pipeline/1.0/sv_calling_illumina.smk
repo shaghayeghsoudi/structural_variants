@@ -38,8 +38,8 @@ rule _run_Trim_Galore
         forward="{sample}.R1_CTAGTAGC-CTAGTAGC_fastq.zip",
         reverse="{sample}.R2_CTAGTAGC-CTAGTAGC_fastq.zip"
     output:
-        forward_trimmed="{sample}_R1_trimmed.fq.gz",
-        reverse_trimmed="{sample}_R2_trimmed.fq.gz",
+        R1_trimmed="{sample}_R1_trimmed.fq.gz",
+        R2_trimmed="{sample}_R2_trimmed.fq.gz",
         report="{sample}_trimming_report.txt"
     log:
         stderr ="logs/indexes/fastqc_raw_stderr.log"    
@@ -51,32 +51,36 @@ rule _run_Trim_Galore
     conda:
         "envs/trim_galore.yaml"  
     shell:
-        "trim_galore --gzip \
+        """
+        trim_galore --gzip \
         --path_to_cutadapt {params.cutadapt_script} \
         {params.adapter_options} \
         --output_dir {params.out_dir} \
         {input.forward} {input.reverse}  \
         --fastqc_args \
         --threads {params.threads} \
-        2> {log.stderr}"
+        2> {log.stderr}
+        """
 
 
 rule _run_BWA_and_sort
     input:
         reference="/oak/stanford/groups/emoding/sequencing/pipeline/indices/hg19.fa"
-        fastqR1=str(rules._run_Trim_Galore.output.forward_trimmed), 
-        fastqR2=str(rules._run_Trim_Galore.output.reverse_trimmed)
+        fastqR1=str(rules._run_Trim_Galore.output.R1_trimmed), 
+        fastqR2=str(rules._run_Trim_Galore.output.R2_trimmed)
     output:
-        bam="{sample}/${sample}.sorted.bam"
+        bam="/oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/alignment-BWA/{sample}/{sample}.sorted.bam"
     conda:
         "envs/bwa.yaml"    
     params:
         threads=10,
-        out_dir = "/oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/alignment-BWA"
     log:
         stderr="logs/indexes/{genome}/bwa.log"
     shell:
-        "bwa mem -t {params.threads} {input.reference} {input.fastqR1} {input.fastqR2} | samtools sort -o {params.out_dir}/${wildcards.sample}.sorted.bam"
+        """
+        bwa mem -t {params.threads} \
+        {input.reference} {input.fastqR1} {input.fastqR2} | samtools sort -o {output}.bam
+        """
 
 
 rule _mark_duplicated
@@ -90,12 +94,14 @@ rule _mark_duplicated
     params:
         ""  # optional params string
     shell:
-        "java -jar ${SCRIPT}/picard.jar MarkDuplicates \
+        """
+        java -jar ${SCRIPT}/picard.jar MarkDuplicates \
         I=${INPUT_DIR}/${SAMPLE_ID}.sorted.bam \
         O=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1.bam \
         M=${OUTPUT_DIR}/${SAMPLE_ID}.rmdup1_metrics.txt \
         REMOVE_DUPLICATES=true \
-        VALIDATION_STRINGENCY=SILENT"
+        VALIDATION_STRINGENCY=SILENT
+        """
 
 
 rule _add_read_group
