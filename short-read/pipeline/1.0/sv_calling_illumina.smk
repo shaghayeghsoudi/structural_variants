@@ -151,7 +151,7 @@ rule _run_manta:
         vcfs="{sample}_manta.vcf.gz",
         sv_bedpe="{sample}_manta_sv.bedpe.gz"
     log:
-        stderr="logs/indexes/{genome}/Bisulfite_Genome.log"    
+        stderr="logs/indexes/{genome}/manta.log"    
     params:
         threads=1,  # Number of threads to use, adjust as needed
         script = /home/users/shsoudi/emoding/envs/manta/bin
@@ -168,17 +168,24 @@ rule _run_manta:
 
 rule _run_delly:
     input:
-        bam="{sample}.sorted.bam",
+        bam="str(rules._add_read_group.output.bam),
         reference="genome.fa"
     output:
         vcf="{sample}.delly.vcf"
+    log:
+        stderr="logs/indexes/{genome}/manta.log"        
     params:
         threads=1,  # Number of threads to use, adjust as needed
         sv_type="DEL"  # Structural variant type (e.g., DEL, DUP, INV, etc.)
     conda:
         "envs/delly.yaml"  # Path to the Delly conda environment YAML file
     shell:
-        "delly call -t {params.sv_type} -o {output.vcf} -g {input.reference} -x {input.bam}"  
+        """
+        for name in DEL DUP INV TRA INS; 
+        do delly call -t ${name} -o ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.bcf -g ${FASTA} ${INPUT_DIR}/${SAMPLE_ID}.rmdup1.bam  &&
+        bcftools view ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.bcf > ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.vcf   #### convert bcf files into vcf
+        done
+        """ 
 
 
 rule run_smoove:
