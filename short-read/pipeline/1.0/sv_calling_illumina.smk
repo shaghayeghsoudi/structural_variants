@@ -23,7 +23,7 @@ rule _run_fastQC_raw_fastq
         zipfastq_1="{sample}_R1_fastqc.zip",
         zipfastq_2="{sample}_R2_fastqc.zip"
     log:
-        stderr ="logs/indexes/fastqc_raw_stderr.log"
+        stderr ="logs/indexes/{sample}_fastqc_raw_stderr.log"
     conda:
         "envs/fastqc.yaml"    
     params:
@@ -42,7 +42,7 @@ rule _run_Trim_Galore
         R2_trimmed="{sample}_R2_trimmed.fq.gz",
         report="{sample}_trimming_report.txt"
     log:
-        stderr ="logs/indexes/fastqc_raw_stderr.log"    
+        stderr ="logs/indexes/{sample}_fastqc_raw_stderr.log"    
     params:
         adapter_options="--paired",  
         threads=3,
@@ -183,12 +183,12 @@ rule _run_delly:
         """
         for name in DEL DUP INV TRA INS; 
         do delly call -t ${name} -o ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.bcf -g ${FASTA} ${INPUT_DIR}/${SAMPLE_ID}.rmdup1.bam  &&
-        bcftools view ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.bcf > ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.vcf   #### convert bcf files into vcf
+        bcftools view ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.bcf > ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.vcf 2> {log.stderr} 
         done
         """ 
 
 
-rule run_smoove:
+rule _run_smoove:
     input:
         bam="{sample}.sorted.bam",
         reference="genome.fa"
@@ -202,7 +202,7 @@ rule run_smoove:
         "smoove call -p {params.threads} -x --name {sample} -f {input.reference} -v {output.vcf} {input.bam}"               
 
 
-rule run_gridss:
+rule _run_gridss:
     input:
         bam="{sample}.sorted.bam",
         reference="genome.fa",
@@ -217,7 +217,7 @@ rule run_gridss:
         "gridss --somatic -o {output.vcf} -r {input.reference} -b {input.bam} -v {input.gridss_config} --threads {params.threads}"
 
 
-rule merge_sv_calls:
+rule _merge_sv_calls:
     input:
         vcf_files=expand("{sample}.vcf", sample=SAMPLES),
     output:
