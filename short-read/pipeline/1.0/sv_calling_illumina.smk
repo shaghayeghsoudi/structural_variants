@@ -15,7 +15,7 @@ rule all:    ### TO DO, adjust rule all in the end
         expand("results/mapped/{dir}/{sample}.XX", zip, dir=DIRS, sample=SAMPLES, genome=GENOMES)
 
 
-rule symlink:
+rule _symlink_fastq:
     input:
          fastq_1=config['data']+"{dir}/{sample}.R1_{i7}-{i5}_fastq.zip",
          fastq_2=config['data']+"{dir}/{sample}.R2_{i7}-{i5}_fastq.zip"
@@ -29,8 +29,8 @@ rule symlink:
 
 rule _run_fastQC_raw_fastq
     input:
-        fastq_1="{sample}.R1_{i7}-{i5}_fastq.zip",
-        fastq_2="{sample}.R2_{i7}-{i5}_fastq.zip"
+        fastq_1= str(rules._symlink_fastq.output.fastq_1),
+        fastq_2= str(rules._symlink_fastq.output.fastq_2)
     output:
         html_1="{sample}_{i7}-{i5}_fastqc.html",
         html_2="{sample}_{i7}-{i5}_fastqc.html",
