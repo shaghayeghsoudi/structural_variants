@@ -26,7 +26,6 @@ rule _symlink_fastq:
         "ln -s {input}.fastq_1 {output}.fastq_2 && ln -s {input}.fastq_2 {output}.fastq_2"     
                
 
-
 rule _run_fastQC_raw_fastq
     input:
         fastq_1= str(rules._symlink_fastq.output.fastq_1),
