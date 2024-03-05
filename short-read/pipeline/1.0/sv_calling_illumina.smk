@@ -5,32 +5,46 @@
 
 
 configfile:
-    "config.yaml"
+    "default.yaml"
 
-SAMPLES = glob_wildcards(config['data']+"/{sample}.fastq")
+SAMPLES = DIRS,SAMPLES,GENOMES = glob_wildcards(config['data']+"{dir}/{sample}-{genome}.fastq")
 
 
+rule all:    ### TO DO, adjust rule all in the end
+    input:
+        expand("results/mapped/{dir}/{sample}.XX", zip, dir=DIRS, sample=SAMPLES, genome=GENOMES)
 
-rule _symlink_fastq
+
+rule symlink:
+    input:
+         fastq_1=config['data']+"{dir}/{sample}.R1_{i7}-{i5}_fastq.zip",
+         fastq_2=config['data']+"{dir}/{sample}.R2_{i7}-{i5}_fastq.zip"
+    output:
+         fastq_1="00-input/{dir}/{sample}-{genome}.fastq",
+         fastq_2="00-input/{dir}/{sample}-{genome}.fastq"
+    shell: 
+        "ln -s {input} {output}"     
+               
 
 
 rule _run_fastQC_raw_fastq
     input:
-        fastq_1="{sample}.R1_CTAGTAGC-CTAGTAGC_fastq.zip",
-        fastq_2="{sample}.R2_CTAGTAGC-CTAGTAGC_fastq.zip"
+        fastq_1="{sample}.R1_{i7}-{i5}_fastq.zip",
+        fastq_2="{sample}.R2_{i7}-{i5}_fastq.zip"
     output:
-        html="{sample}_fastqc.html",
-        zipfastq_1="{sample}_R1_fastqc.zip",
-        zipfastq_2="{sample}_R2_fastqc.zip"
+        html_1="{sample}_{i7}-{i5}_fastqc.html",
+        html_2="{sample}_{i7}-{i5}_fastqc.html",
+        zipfastq_1="{sample}_{i7}-{i5}_R1_fastqc.zip",
+        zipfastq_2="{sample}_{i7}-{i5}_R2_fastqc.zip"
     log:
-        stderr ="logs/indexes/{sample}_fastqc_raw_stderr.log"
+        stderr_fastq ="logs/indexes/{sample}_fastqc_raw_stderr.log"
     conda:
         "envs/fastqc.yaml"    
     params:
-        threads=1 
+        threads=3
         out_dir = "/oak/stanford/groups/emoding/analysis/shaghayegh/shortreads-SV/fastQC_raw"
     shell:
-        "fastqc -o {params.out_dir} -t {params.threads} {input.fastq_1} {input.fastq_2} 2> {log.stderr}"
+        "fastqc -o {params.out_dir} -t {params.threads} {input.fastq_1} {input.fastq_2} 2> {log.stderr_fastq}"
 
 
 rule _run_Trim_Galore
