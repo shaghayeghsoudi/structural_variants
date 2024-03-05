@@ -20,10 +20,10 @@ rule symlink:
          fastq_1=config['data']+"{dir}/{sample}.R1_{i7}-{i5}_fastq.zip",
          fastq_2=config['data']+"{dir}/{sample}.R2_{i7}-{i5}_fastq.zip"
     output:
-         fastq_1="00-input/{dir}/{sample}-{genome}.fastq",
-         fastq_2="00-input/{dir}/{sample}-{genome}.fastq"
+         fastq_1="00-input/{dir}/{sample}.R1_{i7}-{i5}_fastq.zip",
+         fastq_2="00-input/{dir}/{sample}.R2_{i7}-{i5}_fastq.zip"
     shell: 
-        "ln -s {input}.fastq_1 {output}.fastq_2 && ln -s {input}.fastq_2 {output}.fastq_2 "     
+        "ln -s {input}.fastq_1 {output}.fastq_2 && ln -s {input}.fastq_2 {output}.fastq_2"     
                
 
 
