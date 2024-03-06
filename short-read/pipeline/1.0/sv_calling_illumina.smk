@@ -7,12 +7,14 @@
 configfile:
     "default.yaml"
 
-SAMPLES = DIRS,SAMPLES,GENOMES = glob_wildcards(config['data']+"{dir}/{sample}-{genome}.fastq")
+DIRS,SAMPLES,GENOMES = glob_wildcards(config['data']+"{dir}/{sample}-{genome}.fastq")
 
 
-rule all:    ### TO DO, adjust rule all in the end
+rule _all:    ### TO DO, adjust rule all in the end based on what utputs are final
     input:
-        expand("results/mapped/{dir}/{sample}.XX", zip, dir=DIRS, sample=SAMPLES, genome=GENOMES)
+        expand("results/mapped/{dir}/{sample}.XX", zip, dir=DIRS, sample=SAMPLES, genome=GENOMES),
+        expand("results/infer_sex/{dir}/{sample}.normal.sex.txt",zip, dir=DIRS, sample=SAMPLES),
+        expand("results/infer_sex/{dir}/{sample}.normal.sex.txt",zip, dir=DIRS, sample=SAMPLES)
 
 
 rule _symlink_fastq:
