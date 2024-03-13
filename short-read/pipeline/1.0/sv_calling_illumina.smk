@@ -184,7 +184,7 @@ rule _run_manta:
 rule _run_delly:
     input:
         bam="str(rules._add_read_group.output.bam),
-        reference="genome.fa"
+        reference="/oak/stanford/groups/emoding/sequencing/pipeline/indices/hg19.fa"
     output:
         vcf="{sample}.delly.vcf"
     log:
@@ -206,7 +206,7 @@ rule _run_delly:
 rule _run_smoove:
     input:
         bam="{sample}.sorted.bam",
-        reference="genome.fa"
+        reference="/oak/stanford/groups/emoding/sequencing/pipeline/indices/hg19.fa"
     output:
         vcf="{sample}.smoove.vcf"
     params:
@@ -220,7 +220,7 @@ rule _run_smoove:
 rule _run_gridss:
     input:
         bam="{sample}.sorted.bam",
-        reference="genome.fa",
+        reference="/oak/stanford/groups/emoding/sequencing/pipeline/indices/hg19.fa",
         gridss_config="gridss_config.ini"
     output:
         vcf="{sample}.gridss.vcf"
