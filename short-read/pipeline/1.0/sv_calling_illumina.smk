@@ -158,10 +158,24 @@ rule _samtools_index
         "samtools index -@ {params.threads} {input.bam}"
 
 
+rule configure_manta:
+    input:
+        bam="path/to/aligned_reads.bam",
+        reference="path/to/reference.fasta"
+    output:
+        config_dir="path/to/manta_config_dir"
+    params:
+        manta_config="path/to/manta_config.json"
+    shell:
+        """
+        mkdir -p {output.config_dir}
+        manta/bin/configManta.py --bam {input.bam} --referenceFasta {input.reference} --runDir {output.config_dir} --config {params.manta_config}
+        """
+
+
 rule _run_manta:
     input:
         bam=str(rules._add_read_group.output.bam),
-        config="manta_config.ini"
     output:
         vcfs="{sample}_manta.vcf.gz",
         sv_bedpe="{sample}_manta_sv.bedpe.gz"
