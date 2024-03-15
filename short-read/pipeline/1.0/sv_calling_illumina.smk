@@ -168,10 +168,10 @@ rule _run_manta:
     log:
         stderr="logs/indexes/{genome}/manta.log"    
     params:
-        threads=1,  # Number of threads to use, adjust as needed
-        script = /home/users/shsoudi/emoding/envs/manta/bin
+        config.callers.manta.threads
+        script = /home/users/shsoudi/emoding/envs/manta/bin    ### TO DO: adjust script in config
     conda:
-        "envs/manta.yaml"  # Path to the Manta conda environment YAML file
+        "../envs/manta.yaml"  # Path to the Manta conda environment YAML file
     shell:
         """
         configManta.py --bam {input.bam} --config {input.config} --callRegions {params.threads} --callMemMb {params.memory * 1000} && \
@@ -190,8 +190,7 @@ rule _run_delly:
     log:
         stderr="logs/indexes/{genome}/manta.log"        
     params:
-        threads=1,  # Number of threads to use, adjust as needed
-        sv_type="DEL"  # Structural variant type (e.g., DEL, DUP, INV, etc.)
+        config.callers.delly.threads
     conda:
         "envs/delly.yaml"  # Path to the Delly conda environment YAML file
     shell:
@@ -201,6 +200,8 @@ rule _run_delly:
         bcftools view ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.bcf > ${OUT_DIR}/${SAMPLE_ID}_${name}_delly.vcf 2> {log.stderr} 
         done
         """ 
+
+rule _delly_merge:
 
 
 rule _run_smoove:
