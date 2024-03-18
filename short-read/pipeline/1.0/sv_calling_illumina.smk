@@ -160,12 +160,17 @@ rule _samtools_index
 
 rule configure_manta:
     input:
-        bam="path/to/aligned_reads.bam",
+        bam=str(rules._add_read_group.output.bam),
+        bai=str(rules._add_read_group.output.bai),
         reference="path/to/reference.fasta"
     output:
         config_dir="path/to/manta_config_dir"
+    log:
+        stderr="logs/indexes/{genome}/manta.log"     
     params:
         manta_config="path/to/manta_config.json"
+    conda:
+        "../envs/manta.yaml"  # Path to the Manta conda environment YAML file    
     shell:
         """
         mkdir -p {output.config_dir}
