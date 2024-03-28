@@ -12,7 +12,46 @@ library(plyr)
 library(UpSetR)
 library(tidyr)
 
-### load bedpe files (variants detected by each sjort read SV caller on resequenced cell lines) 
+
+
+############################################################
+### load panel files obtained from longread resequencing####
+############################################################
+
+panel_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_panel",pattern = "*.bedpe", full.names= TRUE) 
+
+panels<-lapply(panel_file, function(x){
+
+    pa<-read.delim(x, header = TRUE, sep = "\t")
+})
+
+for (i in 1:length(panels)){
+    panels[[i]]<-cbind(panels[[i]],panel_file[i])
+    }
+
+pan<-do.call("rbind",panels)
+names(pan)[length(names(pan))]<-"path"
+
+pan_good<-pan%>% 
+    mutate(sample=sub('.*/\\s*', '', gsub("_only_finalprobebedfile.bedpe","",path)), )  %>% 
+    dplyr::select(-(path)) %>% 
+    dplyr::mutate(across(ChrPosA,~.+1)) %>% 
+    dplyr::mutate(across(ChrPosB,~.+1)) %>% 
+    mutate(SVtype = toupper(SVtype)) %>% 
+    mutate(uniq_identifier=paste(sample,SVtype,ChrA,ChrPosA,ChrB,ChrPosB, sep = "_"))
+    
+    
+pan_uniq<-pan_good %>% distinct(uniq_identifier, .keep_all= TRUE) 
+#pan_uniq<-pan_uniq[order(as.numeric(pan_uniq$by_sort),decreasing = FALSE),] 
+
+pan_chroms<-unique(c(pan_uniq$ChrA ,pan_uniq$ChrB))  ### unique chromosmes present in the pannel
+
+
+
+###################################################################################################
+### load bedpe files (variants detected by each sjort read SV caller on resequenced cell lines) ###
+###################################################################################################
+
 vcf_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read",pattern = "*.bedpe", full.names= TRUE) 
 
 vcfs<-lapply(vcf_file, function(x){
@@ -39,42 +78,10 @@ beds_illu_good<-beds_illu%>%
 colnames(beds_illu_good) <- c("chrom1","start1","end1","chrom2","start2","end2","typeID","strand1","strand2","SVtype","sample_caller","sample") 
 chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
-beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chrom1 %in% chroms_good) | (beds_illu_good$chrom2 %in% chroms_good),]
+beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chrom1 %in% chroms_good) & (beds_illu_good$chrom2 %in% chroms_good),]  ### remove unplaced scaffolds
 
 
-#########################
-### load panel files ####
-#########################
-panel_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_panel",pattern = "*.bedpe", full.names= TRUE) 
 
-panels<-lapply(panel_file, function(x){
-
-    pa<-read.delim(x, header = TRUE, sep = "\t")
-})
-
-for (i in 1:length(panels)){
-    panels[[i]]<-cbind(panels[[i]],panel_file[i])
-    }
-
-pan<-do.call("rbind",panels)
-names(pan)[length(names(pan))]<-"path"
-
-pan_good<-pan%>% 
-    mutate(sample=sub('.*/\\s*', '', gsub("_only_finalprobebedfile.bedpe","",path)), )  %>% 
-    dplyr::select(-(path)) %>% 
-    dplyr::mutate(across(ChrPosA,~.+1)) %>% 
-    dplyr::mutate(across(ChrPosB,~.+1)) %>% 
-    mutate(SVtype = toupper(SVtype)) %>% 
-    mutate(uniq_identifier=paste(sample,SVtype,ChrA,ChrPosA,ChrB,ChrPosB, sep = "_"))
-    
-    
-pan_uniq<-pan_good %>% distinct(uniq_identifier, .keep_all= TRUE) 
-    #mutate(by_sort=gsub("chr","",ChrA)) 
-
-
-pan_good<-pan_good[order(as.numeric(pan_good$by_sort),decreasing = FALSE),]
-
-pan_good_ch<-pan_good[(pan_good$ChrA%in% chroms_good | pan_good$ChrB%in% chroms_good),]   
     
 samples<-unique(pan_good$sample)
 
