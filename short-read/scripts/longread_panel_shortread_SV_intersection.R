@@ -1,6 +1,6 @@
 
 
-
+### find intersection between selected panel from longread and short read SV
 rm(list = ls())
 
 ### load required libraries
@@ -76,15 +76,17 @@ samples<-unique(pan_good$sample)
 
 for(ss in 1:length(samples)){
 
-    focal_caller<-beds_illu_good_ch[beds_illu_good_ch$sample==samples[ss],]
-    focal_caller_format<-focal_caller[c("chrom1","start1","start2","SVtype")]
-    setDT(focal_caller_format)
-    setkey(focal_caller_format, chrom1,start1,start2)
+   focal_caller<-beds_illu_good_ch %>% 
+    filter(sample==samples[ss]) %>% 
+    dplyr::select(chrom1,start1,start2,SVtype)
+    #setDT(focal_caller_format)
+    #setkey(focal_caller_format, chrom1,start1,start2)
     
     
-    focal_panel<-pan_good_ch[pan_good_ch$sample==samples[ss],]
-    focal_panel_format<-focal_panel[c("ChrA","ChrPosA","ChrPosB","SVtype")]
-    colnames(focal_panel_format)<-c("chrom1","start1","start2","SVtype")
+    focal_panel<-pan_good_ch %>% 
+    filter(sample==samples[ss]) %>% 
+    dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype) %>% 
+    rename_with(pan_good_ch, recode, ChrA = "chrom1",ChrPosA ="start1" ,  ChrPosB="start2" , SVtype= "SVtype")  ### fix renames
 
 
     chroms<-unique(focal_panel_format$chrom1)
