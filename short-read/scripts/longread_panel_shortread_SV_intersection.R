@@ -10,7 +10,7 @@ library(vcfR)
 library(StructuralVariantAnnotation)
 library(plyr)
 library(UpSetR)
-
+library(tidyr)
 
 ### load bedpe files (variants detected by each sjort read SV caller on resequenced cell lines) 
 vcf_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read",pattern = "*.bedpe", full.names= TRUE) 
@@ -40,6 +40,8 @@ colnames(beds_illu_good) <- c("chrom1","start1","end1","chrom2","start2","end2",
 chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
 beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chrom1 %in% chroms_good) | (beds_illu_good$chrom2 %in% chroms_good),]
+
+
 #########################
 ### load panel files ####
 #########################
@@ -63,7 +65,10 @@ pan_good<-pan%>%
     dplyr::mutate(across(ChrPosA,~.+1)) %>% 
     dplyr::mutate(across(ChrPosB,~.+1)) %>% 
     mutate(SVtype = toupper(SVtype)) %>% 
-    distinct(Bracket_Info, .keep_all= TRUE) 
+    mutate(uniq_identifier=paste(sample,SVtype,ChrA,ChrPosA,ChrB,ChrPosB, sep = "_"))
+    
+    
+pan_uniq<-pan_good %>% distinct(uniq_identifier, .keep_all= TRUE) 
     #mutate(by_sort=gsub("chr","",ChrA)) 
 
 
@@ -76,29 +81,32 @@ samples<-unique(pan_good$sample)
 
 for(ss in 1:length(samples)){
 
-   focal_caller<-beds_illu_good_ch %>% 
+    focal_caller<-beds_illu_good_ch %>% 
     filter(sample==samples[ss]) %>% 
-    dplyr::select(chrom1,start1,start2,SVtype)
+    dplyr::select(chrom1,start1,start2,SVtype,sample_caller)
     #setDT(focal_caller_format)
     #setkey(focal_caller_format, chrom1,start1,start2)
     
     
     focal_panel<-pan_good_ch %>% 
     filter(sample==samples[ss]) %>% 
-    dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype) %>% 
-    rename_with(pan_good_ch, recode, ChrA = "chrom1",ChrPosA ="start1" ,  ChrPosB="start2" , SVtype= "SVtype")  ### fix renames
+    dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype) 
+
+    colnames(focal_panel)<-c("chrom1","start1","start2","SVtype")
+    
+    #rename_with(pan_good_ch, recode, ChrA = "chrom1",ChrPosA ="start1" ,  ChrPosB="start2" , SVtype= "SVtype")  ### fix renames
 
 
-    chroms<-unique(focal_panel_format$chrom1)
-
+    chroms<-unique(focal_panel$chrom1)
+    out_res<-NULL
     for(ii in 1:length(chroms)){
 
-        focal_caller_chrom<-focal_caller_format[focal_caller_format$chrom1 ==chroms[ii], ] 
-        focal_caller_chrom<-focal_caller_chrom[focal_caller_chrom$SVtype != "TRA",]       
+        focal_caller_chrom<-focal_caller[focal_caller$chrom1 ==chroms[ii], ] 
+        focal_caller_chrom<-focal_caller[focal_caller$SVtype != "TRA",]       
         
         
-        focal_panel_chrom<-focal_panel_format[focal_panel_format$chrom1 ==chroms[ii],]
-        focal_panel_chrom<-focal_panel_chrom[focal_panel_chrom$SVtype != "TRA",]    
+        focal_panel_chrom<-focal_panel[focal_panel$chrom1 ==chroms[ii],]
+        focal_panel_chrom<-focal_panel[focal_panel$SVtype != "TRA",]    
 
 
         setDT(focal_caller_chrom)
@@ -110,11 +118,10 @@ for(ss in 1:length(samples)){
         setkey(focal_panel_chrom, chrom1,start1,start2)
 
         overlaps<-data.frame(foverlaps(focal_caller_chrom, focal_panel_chrom, type="any"))
-        overlaps_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,]
+        overlaps_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>% 
+           drop_na()
+       out_res<-rbind(overlaps_matchSV,out_res) 
 
-        overlaps_matchSV_noNA<-drop
-
- 
 
 
 
