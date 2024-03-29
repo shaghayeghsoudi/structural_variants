@@ -11,6 +11,7 @@ library(StructuralVariantAnnotation)
 library(plyr)
 library(UpSetR)
 library(tidyr)
+library(data.table)
 
 
 
@@ -75,46 +76,47 @@ beds_illu_good<-beds_illu%>%
     #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
    
     
-colnames(beds_illu_good) <- c("chrom1","start1","end1","chrom2","start2","end2","typeID","strand1","strand2","SVtype","sample_caller","sample") 
-chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
+colnames(beds_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","strand1","strand2","SVtype","sample_caller","sample") 
+#chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
-beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chrom1 %in% chroms_good) & (beds_illu_good$chrom2 %in% chroms_good),]  ### remove unplaced scaffolds
+beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chromA %in% pan_chroms) & (beds_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
 
 
-
-    
-samples<-unique(pan_good$sample)
+### find overlaps     
+samples<-unique(pan_uniq$sample)  ### what are the samples in the panel 
 
 
 for(ss in 1:length(samples)){
-
+  
+    ## SV callers from resequenced 
     focal_caller<-beds_illu_good_ch %>% 
     filter(sample==samples[ss]) %>% 
-    dplyr::select(chrom1,start1,start2,SVtype,sample_caller)
+    dplyr::select(chromA,startA,startB,SVtype,sample_caller)
     #setDT(focal_caller_format)
     #setkey(focal_caller_format, chrom1,start1,start2)
     
-    
-    focal_panel<-pan_good_ch %>% 
+    ## longread panel
+    focal_panel<-pan_uniq %>% 
     filter(sample==samples[ss]) %>% 
     dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype) 
 
-    colnames(focal_panel)<-c("chrom1","start1","start2","SVtype")
+    colnames(focal_panel)<-c("chromA","startA","startB","SVtype")
     
     #rename_with(pan_good_ch, recode, ChrA = "chrom1",ChrPosA ="start1" ,  ChrPosB="start2" , SVtype= "SVtype")  ### fix renames
 
 
-    chroms<-unique(focal_panel$chrom1)
-    out_res<-NULL
+    chroms<-unique(focal_panel$chromA)
+    
+    out_res_chrom<-NULL
     for(ii in 1:length(chroms)){
 
-        focal_caller_chrom<-focal_caller[focal_caller$chrom1 ==chroms[ii], ] 
-        focal_caller_chrom<-focal_caller[focal_caller$SVtype != "TRA",]       
+        ## SV caller
+        focal_caller_chrom<-focal_caller %>% 
+         filter(chromA ==chroms[ii] & SVtype != "TRA")  ### temporarily skip TRA
         
-        
-        focal_panel_chrom<-focal_panel[focal_panel$chrom1 ==chroms[ii],]
-        focal_panel_chrom<-focal_panel[focal_panel$SVtype != "TRA",]    
-
+        ## panel
+        focal_panel_chrom<-focal_panel %>% 
+         filter(chromA ==chroms[ii] & SVtype != "TRA")
 
         setDT(focal_caller_chrom)
         setDT(focal_panel_chrom)
