@@ -109,32 +109,48 @@ for(ss in 1:length(samples)){
     
     out_res_chrom<-NULL
     for(ii in 1:length(chroms)){
+        #for(ii in 1:20){
 
+  
         ## SV caller
-        focal_caller_chrom<-focal_caller %>% 
-         filter(chromA ==chroms[ii] & SVtype != "TRA")  ### temporarily skip TRA
+        focal_caller_chrom<-focal_caller %>%
+         filter(chromA ==chroms[ii] & SVtype != "TRA") %>%  ### tTO FIX: emporarily skip TRA
+         filter(!(startB < startA))              ### tTO FIX: emporarily skip TRA
+         
+           
         
         ## panel
         focal_panel_chrom<-focal_panel %>% 
-         filter(chromA ==chroms[ii] & SVtype != "TRA")
+         filter(chromA ==chroms[ii] & SVtype != "TRA")%>%  ### tTO FIX: emporarily skip TRA
+         filter(!(startB < startA))
 
         setDT(focal_caller_chrom)
         setDT(focal_panel_chrom)
 
         
         
-        setkey(focal_caller_chrom, chrom1,start1,start2)
-        setkey(focal_panel_chrom, chrom1,start1,start2)
+        setkey(focal_caller_chrom, chromA,startA,startB)
+        setkey(focal_panel_chrom, chromA,startA,startB)
 
         overlaps<-data.frame(foverlaps(focal_caller_chrom, focal_panel_chrom, type="any"))
         overlaps_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>% 
            drop_na()
-       out_res<-rbind(overlaps_matchSV,out_res) 
+
+        perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
 
 
+           ### rbind chroms
+       if (nrow(perfect_match)>0) {
+
+            out_res_chrom<-rbind(perfect_match,out_res_chrom) 
+
+
+       } ## if loop 
 
 
     }
+
+}    
 
 
 
