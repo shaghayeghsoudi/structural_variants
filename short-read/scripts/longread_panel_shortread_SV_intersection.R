@@ -174,7 +174,7 @@ names(gridss_illu)[length(names(gridss_illu))]<-"path"
 
 gridss_illu_good<-gridss_illu%>% 
     mutate(sample_caller=sub('.*/\\s*', '', gsub("_gridss_survivor.bedpe","",path)), )  %>% 
-    #dplyr::select(!(path)) %>% 
+    dplyr::select(!(path)) %>% 
     #mutate(sample=gsub("_.*$","",sample_caller)) %>% 
     dplyr::mutate(across(V2:V3,~.-1)) %>% 
     dplyr::mutate(across(V5:V6,~.-1)) 
