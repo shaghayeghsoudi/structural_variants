@@ -153,6 +153,7 @@ for(ss in 1:length(samples)){
 }    
 
 
+write.table(out_res_chrom, file ="~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/outputs/out_res_longread_pannel_resequenced_short_read_SW_other3.table", col.names = TRUE, row.names = FALSE, sep = "\t",quote = FALSE)
 
 #########################
 ###### just gridds #######
@@ -181,7 +182,7 @@ gridss_illu_good<-gridss_illu%>%
     #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
    
     
-colnames(gridss_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","strand1","strand2","SVtype","sample") 
+colnames(gridss_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","coma","strand1","strand2","SVtype","sample") 
 #chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
 gridss_illu_good_ch<-gridss_illu_good[(gridss_illu_good$chromA %in% pan_chroms) & (gridss_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
@@ -192,7 +193,81 @@ samples<-unique(pan_uniq$sample)  ### what are the samples in the panel
 
 
 
+for(ss in 1:length(samples)){
+  
+    ## SV callers from resequenced 
+    focal_caller<-gridss_illu_good_ch %>% 
+    filter(sample==samples[ss]) %>% 
+    dplyr::select(chromA,startA,startB,SVtype,sample)
+    #setDT(focal_caller_format)
+    #setkey(focal_caller_format, chrom1,start1,start2)
+    
+    ## longread panel
+    focal_panel<-pan_uniq %>% 
+    filter(sample==samples[ss]) %>% 
+    dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype) 
 
+    colnames(focal_panel)<-c("chromA","startA","startB","SVtype")
+    
+    #rename_with(pan_good_ch, recode, ChrA = "chrom1",ChrPosA ="start1" ,  ChrPosB="start2" , SVtype= "SVtype")  ### fix renames
+
+
+    chroms<-unique(focal_panel$chromA)
+    
+    out_res_chrom<-NULL
+    for(ii in 1:length(chroms)){
+        #for(ii in 1:20){
+
+  
+        ## SV caller
+        focal_caller_chrom<-focal_caller %>%
+         #filter(chromA ==chroms[ii] & SVtype != "TRA") %>%  ### tTO FIX: emporarily skip TRA
+         filter(chromA ==chroms[ii]) %>% 
+         filter(!(startB < startA))              ### tTO FIX: emporarily skip TRA
+         
+           
+        
+        ## panel
+        focal_panel_chrom<-focal_panel %>% 
+         filter(chromA ==chroms[ii])%>%  ### tTO FIX: emporarily skip TRA
+         #filter(chromA ==chroms[ii] & SVtype != "TRA")%>%  ### tTO FIX: emporarily skip TRA
+         filter(!(startB < startA))
+
+        setDT(focal_caller_chrom)
+        setDT(focal_panel_chrom)
+
+        
+        
+        setkey(focal_caller_chrom, chromA,startA,startB)
+        setkey(focal_panel_chrom, chromA,startA,startB)
+
+        overlaps<-data.frame(foverlaps(focal_caller_chrom, focal_panel_chrom, type="any"))
+        #overlaps_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>% 
+        overlaps_matchSV<-overlaps %>% 
+           drop_na()
+
+        perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
+
+
+           ### rbind chroms
+       if (nrow(perfect_match)>0) {
+
+            out_res_chrom<-rbind(perfect_match,out_res_chrom) 
+
+
+       } ## if loop 
+
+
+    }  ### chrom loop 
+
+}    
+
+out_res_chrom<-out_res_chrom[,c(1,2,3,4,5,6,8)]
+write.table(out_res_chrom, file ="~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/outputs/out_res_longread_pannel_resequenced_short_read_SW_Gridss.table", col.names = TRUE, row.names = FALSE, sep = "\t",quote = FALSE)
+
+
+#########################
+##################
 ### from here ###
 ### create matrix
 results_out <- array (NA, c((nrow (input_good) * (end1 - start1 + 1)),7))
