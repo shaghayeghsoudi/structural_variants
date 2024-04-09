@@ -166,22 +166,22 @@ gridss<-lapply(gridss_file, function(x){
 })
 
 for (i in 1:length(gridss)){
-    vcfs[[i]]<-cbind(gridss[[i]],gridss_file[i])
+    gridss[[i]]<-cbind(gridss[[i]],gridss_file[i])
     }
 
 gridss_illu<-do.call("rbind",gridss)
 names(gridss_illu)[length(names(gridss_illu))]<-"path"
 
 gridss_illu_good<-gridss_illu%>% 
-    mutate(sample_caller=sub('.*/\\s*', '', gsub("_survivor.bedpe","",path)), )  %>% 
-    dplyr::select(-c(path,V8)) %>% 
-    mutate(sample=gsub("_.*$","",sample_caller)) %>% 
+    mutate(sample_caller=sub('.*/\\s*', '', gsub("_gridss_survivor.bedpe","",path)), )  %>% 
+    #dplyr::select(!(path)) %>% 
+    #mutate(sample=gsub("_.*$","",sample_caller)) %>% 
     dplyr::mutate(across(V2:V3,~.-1)) %>% 
     dplyr::mutate(across(V5:V6,~.-1)) 
     #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
    
     
-colnames(gridss_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","strand1","strand2","SVtype","sample_caller","sample") 
+colnames(gridss_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","strand1","strand2","SVtype","sample") 
 #chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
 gridss_illu_good_ch<-gridss_illu_good[(gridss_illu_good$chromA %in% pan_chroms) & (gridss_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
