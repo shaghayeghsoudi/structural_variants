@@ -148,28 +148,52 @@ for(ss in 1:length(samples)){
        } ## if loop 
 
 
-    }
+    }  ### chrom loop 
 
 }    
 
 
 
+#########################
+###### just gridds #######
+#########################
 
+gridss_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/gridss",pattern = "*.bedpe", full.names= TRUE) 
 
+gridss<-lapply(gridss_file, function(x){
+
+    bed<-read.delim(x, header = FALSE, sep = "\t")
+})
+
+for (i in 1:length(gridss)){
+    vcfs[[i]]<-cbind(gridss[[i]],gridss_file[i])
+    }
+
+gridss_illu<-do.call("rbind",gridss)
+names(gridss_illu)[length(names(gridss_illu))]<-"path"
+
+gridss_illu_good<-gridss_illu%>% 
+    mutate(sample_caller=sub('.*/\\s*', '', gsub("_survivor.bedpe","",path)), )  %>% 
+    dplyr::select(-c(path,V8)) %>% 
+    mutate(sample=gsub("_.*$","",sample_caller)) %>% 
+    dplyr::mutate(across(V2:V3,~.-1)) %>% 
+    dplyr::mutate(across(V5:V6,~.-1)) 
+    #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
+   
     
-    setDT(focal_panel_format)
-    setkey(focal_panel_format, chrom1,start1,start2)
+colnames(gridss_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","strand1","strand2","SVtype","sample_caller","sample") 
+#chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
+
+gridss_illu_good_ch<-gridss_illu_good[(gridss_illu_good$chromA %in% pan_chroms) & (gridss_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
 
 
-    overlaps <- foverlaps(focal_caller_format, focal_panel_format_sorted, type="any")
+### find overlaps     
+samples<-unique(pan_uniq$sample)  ### what are the samples in the panel 
 
 
 
 
-
-}
-
-### from here
+### from here ###
 ### create matrix
 results_out <- array (NA, c((nrow (input_good) * (end1 - start1 + 1)),7))
 count <- 0
