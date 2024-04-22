@@ -48,13 +48,12 @@ pan_good<-pan%>%
 
 #pan_uniq<-pan_uniq[order(as.numeric(pan_uniq$by_sort),decreasing = FALSE),] 
 
-pan_chroms<-unique(c(pan_uniq$ChrA ,pan_uniq$ChrB))  ### unique chromosmes present in the pannel
+pan_chroms<-unique(c(pan_good$ChrA ,pan_good$ChrB))  ### unique chromosmes present in the pannel
 
 
-
-###################################################################################################
-### load bedpe files (variants detected by each sjort read SV caller on resequenced cell lines) ###
-###################################################################################################
+################################################################################################################
+### load bedpe files (variants detected by each short read SV caller on re-sequenced cell lines/patient data) ###
+################################################################################################################
 
 vcf_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read",pattern = "*.bedpe", full.names= TRUE) 
 
@@ -74,16 +73,16 @@ beds_illu_good<-beds_illu%>%
     mutate(sample_caller=sub('.*/\\s*', '', gsub("_survivor.bedpe","",path)), )  %>% 
     dplyr::select(-c(path,V8)) %>% 
     mutate(sample=gsub("_.*$","",sample_caller)) %>% 
-    dplyr::mutate(across(V2:V3,~.-1)) %>% 
-    dplyr::mutate(across(V5:V6,~.-1)) 
+    dplyr::mutate(across(V2:V3,~.-1),across(V5:V6,~.-1)) 
     #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
    
     
 colnames(beds_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","strand1","strand2","SVtype","sample_caller","sample") 
 #chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
-beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chromA %in% pan_chroms) & (beds_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
+#beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chromA %in% pan_chroms) & (beds_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
 
+beds_illu_good_ch<-subset(beds_illu_good,chromA %in% pan_chroms & chromB %in% pan_chroms)
 
 ### find overlaps     
 samples<-unique(pan_uniq$sample)  ### what are the samples in the panel 
