@@ -43,10 +43,9 @@ pan_good<-pan%>%
     mutate(sample=sub('.*/\\s*', '', gsub("_only_finalprobebedfile.bedpe","",path)), )  %>% 
     dplyr::select(-(path)) %>% 
     dplyr::mutate(across(ChrPosA,~.+1),across(ChrPosB,~.+1)) %>% 
-    mutate(SVtype = toupper(SVtype),uniq_identifier=paste(sample,SVtype,ChrA,ChrPosA,ChrB,ChrPosB, sep = "_")) 
+    mutate(SVtype = toupper(SVtype),uniq_identifier=paste(sample,SVtype,ChrA,ChrPosA,ChrB,ChrPosB, sep = "_")) %>% 
+    distinct(uniq_identifier, .keep_all= TRUE) 
 
-    
-pan_uniq<-pan_good %>% distinct(uniq_identifier, .keep_all= TRUE) 
 #pan_uniq<-pan_uniq[order(as.numeric(pan_uniq$by_sort),decreasing = FALSE),] 
 
 pan_chroms<-unique(c(pan_uniq$ChrA ,pan_uniq$ChrB))  ### unique chromosmes present in the pannel
