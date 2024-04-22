@@ -125,29 +125,31 @@ for(ss in 1:length(samples)){
         setkey(focal_panel_chrom, chromA,startA,startB)
 
         overlaps<-data.frame(foverlaps(focal_caller_chrom, focal_panel_chrom, type="any"))
-        overlaps_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>%   ### match in SV type between panel and resequenced variants
+        overlaps_full_partial_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>%   ### match in SV type between panel and resequenced variants
            drop_na() %>% 
-           mutate(start_diff = startA-i.startA, end_diff = startB-i.startB)
+           mutate(start_diff = abs(startA-i.startA), end_diff = abs(startB-i.startB)) %>% 
+           filter(start_diff <=50 & end_diff <=50)
 
 
-        perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
+        #perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
 
 
            ### rbind chroms
-       if (nrow(perfect_match)>0) {
+       if (nrow(overlaps_full_partial_matchSV)>0) {
 
-            out_res_chrom<-rbind(perfect_match,out_res_chrom) 
+            out_res_chrom<-rbind(overlaps_full_partial_matchSV,out_res_chrom) 
 
 
        } ## if loop 
 
 
     }  ### chrom loop 
+    write.table(out_res_chrom, file =paste("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/outputs-celllines_pacbiopanel_ovelap_resequenced_illumina_full_partial_overlap/out_res_PacBio_pannel_overlap_resequenced_illumina_",samples[ss],"_other3_full_partial_50base.table", sep = ""), col.names = TRUE, row.names = FALSE, sep = "\t",quote = FALSE)
+
 
 }    
 
 
-write.table(out_res_chrom, file ="~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/outputs/out_res_longread_pannel_resequenced_short_read_SW_other3.table", col.names = TRUE, row.names = FALSE, sep = "\t",quote = FALSE)
 
 #########################
 ###### just gridds #######
