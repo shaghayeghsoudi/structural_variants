@@ -150,7 +150,6 @@ for(ss in 1:length(samples)){
 }    
 
 
-
 #########################
 ###### just gridds #######
 #########################
@@ -173,33 +172,30 @@ gridss_illu_good<-gridss_illu%>%
     mutate(sample_caller=sub('.*/\\s*', '', gsub("_gridss_survivor.bedpe","",path)), )  %>% 
     dplyr::select(!(path)) %>% 
     #mutate(sample=gsub("_.*$","",sample_caller)) %>% 
-    dplyr::mutate(across(V2:V3,~.-1)) %>% 
-    dplyr::mutate(across(V5:V6,~.-1)) 
+    dplyr::mutate(across(V2:V3,~.-1),across(V5:V6,~.-1)) 
     #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
    
     
 colnames(gridss_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","coma","strand1","strand2","SVtype","sample") 
 #chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
-gridss_illu_good_ch<-gridss_illu_good[(gridss_illu_good$chromA %in% pan_chroms) & (gridss_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
+#gridss_illu_good_ch<-gridss_illu_good[(gridss_illu_good$chromA %in% pan_chroms) & (gridss_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
+gridss_illu_good_ch<-subset(gridss_illu_good,chromA %in% pan_chroms & chromB %in% pan_chroms)
 
-
-### find overlaps     
-samples<-unique(pan_uniq$sample)  ### what are the samples in the panel 
-
-
+### find overlaps between GRIDSS and PacBio panel
+ 
 
 for(ss in 1:length(samples)){
   
     ## SV callers from resequenced 
-    focal_caller<-gridss_illu_good_ch %>% 
+    focal_girdss<-gridss_illu_good_ch %>% 
     filter(sample==samples[ss]) %>% 
     dplyr::select(chromA,startA,startB,SVtype,sample)
     #setDT(focal_caller_format)
     #setkey(focal_caller_format, chrom1,start1,start2)
     
     ## longread panel
-    focal_panel<-pan_uniq %>% 
+    focal_panel<-pan_good %>% 
     filter(sample==samples[ss]) %>% 
     dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype) 
 
@@ -214,27 +210,24 @@ for(ss in 1:length(samples)){
     for(ii in 1:length(chroms)){
         #for(ii in 1:20){
 
-  
-        ## SV caller
-        focal_caller_chrom<-focal_caller %>%
+        ## SV caller,, gridss
+         focal_gridss_chrom<-focal_girdss %>%
          #filter(chromA ==chroms[ii] & SVtype != "TRA") %>%  ### tTO FIX: emporarily skip TRA
          filter(chromA ==chroms[ii]) %>% 
          filter(!(startB < startA))              ### tTO FIX: emporarily skip TRA
          
            
-        
-        ## panel
+        ## PacBio panel
         focal_panel_chrom<-focal_panel %>% 
          filter(chromA ==chroms[ii])%>%  ### tTO FIX: emporarily skip TRA
          #filter(chromA ==chroms[ii] & SVtype != "TRA")%>%  ### tTO FIX: emporarily skip TRA
          filter(!(startB < startA))
 
-        setDT(focal_caller_chrom)
+        setDT(focal_gridss_chrom)
         setDT(focal_panel_chrom)
 
         
-        
-        setkey(focal_caller_chrom, chromA,startA,startB)
+        setkey(focal_gridss_chrom, chromA,startA,startB)
         setkey(focal_panel_chrom, chromA,startA,startB)
 
         overlaps<-data.frame(foverlaps(focal_caller_chrom, focal_panel_chrom, type="any"))
