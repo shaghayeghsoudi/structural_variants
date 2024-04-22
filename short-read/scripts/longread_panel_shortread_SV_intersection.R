@@ -21,6 +21,12 @@ library(data.table)
 
 panel_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_panel",pattern = "*.bedpe", full.names= TRUE) 
 
+## alternative
+#my_fa<-function(x){  ## write the function first
+#    read.delim(x, header = TRUE, sep = "\t")
+#}
+#panels<-lapply(panel_file, my_fa)  ## run in in lappy
+
 panels<-lapply(panel_file, function(x){
 
     pa<-read.delim(x, header = TRUE, sep = "\t")
