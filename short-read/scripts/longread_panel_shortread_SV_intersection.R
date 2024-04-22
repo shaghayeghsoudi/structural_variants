@@ -5,11 +5,11 @@ rm(list = ls())
 
 ### load required libraries
 library(dplyr)
-library(ggplot2)
-library(vcfR)
-library(StructuralVariantAnnotation)
-library(plyr)
-library(UpSetR)
+#library(ggplot2)
+#library(vcfR)
+#library(StructuralVariantAnnotation)
+#library(plyr)
+#library(UpSetR)
 library(tidyr)
 library(data.table)
 
