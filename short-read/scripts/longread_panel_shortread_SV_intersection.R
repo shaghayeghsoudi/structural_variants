@@ -42,11 +42,9 @@ names(pan)[length(names(pan))]<-"path"
 pan_good<-pan%>% 
     mutate(sample=sub('.*/\\s*', '', gsub("_only_finalprobebedfile.bedpe","",path)), )  %>% 
     dplyr::select(-(path)) %>% 
-    dplyr::mutate(across(ChrPosA,~.+1)) %>% 
-    dplyr::mutate(across(ChrPosB,~.+1)) %>% 
-    mutate(SVtype = toupper(SVtype)) %>% 
-    mutate(uniq_identifier=paste(sample,SVtype,ChrA,ChrPosA,ChrB,ChrPosB, sep = "_"))
-    
+    dplyr::mutate(across(ChrPosA,~.+1),across(ChrPosB,~.+1)) %>% 
+    mutate(SVtype = toupper(SVtype),uniq_identifier=paste(sample,SVtype,ChrA,ChrPosA,ChrB,ChrPosB, sep = "_")) 
+
     
 pan_uniq<-pan_good %>% distinct(uniq_identifier, .keep_all= TRUE) 
 #pan_uniq<-pan_uniq[order(as.numeric(pan_uniq$by_sort),decreasing = FALSE),] 
