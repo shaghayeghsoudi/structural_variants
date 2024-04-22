@@ -81,11 +81,10 @@ colnames(beds_illu_good) <- c("chromA","startA","endA","chromB","startB","endB",
 #chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
 #beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chromA %in% pan_chroms) & (beds_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
-
 beds_illu_good_ch<-subset(beds_illu_good,chromA %in% pan_chroms & chromB %in% pan_chroms)
 
 ### find overlaps     
-samples<-unique(pan_uniq$sample)  ### what are the samples in the panel 
+samples<-unique(pan_good$sample)  ### what are the samples in the panel 
 
 
 for(ss in 1:length(samples)){
@@ -98,45 +97,38 @@ for(ss in 1:length(samples)){
     #setkey(focal_caller_format, chrom1,start1,start2)
     
     ## longread panel
-    focal_panel<-pan_uniq %>% 
+    focal_panel<-pan_good %>% 
     filter(sample==samples[ss]) %>% 
     dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype) 
-
     colnames(focal_panel)<-c("chromA","startA","startB","SVtype")
     
     #rename_with(pan_good_ch, recode, ChrA = "chrom1",ChrPosA ="start1" ,  ChrPosB="start2" , SVtype= "SVtype")  ### fix renames
-
-
     chroms<-unique(focal_panel$chromA)
     
     out_res_chrom<-NULL
     for(ii in 1:length(chroms)){
         #for(ii in 1:20){
 
-  
         ## SV caller
         focal_caller_chrom<-focal_caller %>%
-         filter(chromA ==chroms[ii] & SVtype != "TRA") %>%  ### tTO FIX: emporarily skip TRA
-         filter(!(startB < startA))              ### tTO FIX: emporarily skip TRA
+        filter(chromA ==chroms[ii] & SVtype != "TRA") %>%   ### toDO FIX: emporarily skip TRA
+        filter(!(startB < startA))    
+        setDT(focal_caller_chrom)                      ### toDO FIX: emporarily skip TRA
          
-           
-        
         ## panel
         focal_panel_chrom<-focal_panel %>% 
-         filter(chromA ==chroms[ii] & SVtype != "TRA")%>%  ### tTO FIX: emporarily skip TRA
-         filter(!(startB < startA))
-
-        setDT(focal_caller_chrom)
+        filter(chromA ==chroms[ii] & SVtype != "TRA")%>%  ### tTO FIX: emporarily skip TRA
+        filter(!(startB < startA))
         setDT(focal_panel_chrom)
 
-        
-        
         setkey(focal_caller_chrom, chromA,startA,startB)
         setkey(focal_panel_chrom, chromA,startA,startB)
 
         overlaps<-data.frame(foverlaps(focal_caller_chrom, focal_panel_chrom, type="any"))
-        overlaps_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>% 
-           drop_na()
+        overlaps_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>%   ### match in SV type between panel and resequenced variants
+           drop_na() %>% 
+           mutate(start_diff = startA-i.startA, end_diff = startB-i.startB)
+
 
         perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
 
