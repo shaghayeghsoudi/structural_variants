@@ -48,9 +48,39 @@ pan_good<-pan%>%
 
 #pan_uniq<-pan_uniq[order(as.numeric(pan_uniq$by_sort),decreasing = FALSE),] 
 
-pan_chroms<-unique(c(pan_good$ChrA ,pan_good$ChrB))  ### unique chromosmes present in the pannel
+pan_chroms<-unique(c(pan_good$ChrA ,pan_good$ChrB))  ### unique chromosmes present in the PacBio pannel
 
 
+###################################################
+### load bedpe files (detected by just gridss) ###
+###################################################
+
+gridss_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/gridss",pattern = "*.bedpe", full.names= TRUE) 
+
+gridss<-lapply(gridss_file, function(x){
+
+    bed<-read.delim(x, header = FALSE, sep = "\t")
+})
+
+for (i in 1:length(gridss)){
+    gridss[[i]]<-cbind(gridss[[i]],gridss_file[i])
+    }
+
+gridss_illu<-do.call("rbind",gridss)
+names(gridss_illu)[length(names(gridss_illu))]<-"path"
+
+gridss_illu_good<-gridss_illu%>% 
+    mutate(sample_caller=sub('.*/\\s*', '', gsub("_survivor.bedpe","",path)), )  %>% 
+    dplyr::select(!(path)) %>% 
+    mutate(sample=gsub("_.*$","",sample_caller)) %>% 
+    #mutate(sample=gsub("_.*$","",sample_caller)) %>% 
+    dplyr::mutate(across(V2:V3,~.-1),across(V5:V6,~.-1)) 
+    #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
+
+colnames(gridss_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","coma","strand1","strand2","SVtype","sample_caller","sample") 
+gridss_illu_good_ch<-subset(gridss_illu_good,chromA %in% pan_chroms & chromB %in% pan_chroms)
+
+   
 ################################################################################################################
 ### load bedpe files (variants detected by each short read SV caller on re-sequenced cell lines/patient data) ###
 ################################################################################################################
@@ -128,7 +158,11 @@ for(ss in 1:length(samples)){
         overlaps_full_partial_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>%   ### match in SV type between panel and resequenced variants
            drop_na() %>% 
            mutate(start_diff = abs(startA-i.startA), end_diff = abs(startB-i.startB)) %>% 
-           filter(start_diff <=50 & end_diff <=50)
+           filter(start_diff <=50 & end_diff <=50) %>% 
+           dplyr::select(chromA,startA,startB,SVtype,i.startA,i.startB,sample_caller,start_diff,end_diff)
+        colnames(overlaps_full_partial_matchSV)<-c("chrom","panel_start","panel_end","SV_type","short_read_caller_start","short_read_caller_end","sample_caller", "start_diff", "end_diff")
+
+
 
 
         #perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
@@ -150,40 +184,11 @@ for(ss in 1:length(samples)){
 }    
 
 
-#########################
-###### just gridds #######
-#########################
+################################################################
+###### ### find overlaps between GRIDSS and PacBio panel #######
+################################################################
 
-gridss_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/gridss",pattern = "*.bedpe", full.names= TRUE) 
 
-gridss<-lapply(gridss_file, function(x){
-
-    bed<-read.delim(x, header = FALSE, sep = "\t")
-})
-
-for (i in 1:length(gridss)){
-    gridss[[i]]<-cbind(gridss[[i]],gridss_file[i])
-    }
-
-gridss_illu<-do.call("rbind",gridss)
-names(gridss_illu)[length(names(gridss_illu))]<-"path"
-
-gridss_illu_good<-gridss_illu%>% 
-    mutate(sample_caller=sub('.*/\\s*', '', gsub("_gridss_survivor.bedpe","",path)), )  %>% 
-    dplyr::select(!(path)) %>% 
-    #mutate(sample=gsub("_.*$","",sample_caller)) %>% 
-    dplyr::mutate(across(V2:V3,~.-1),across(V5:V6,~.-1)) 
-    #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
-   
-    
-colnames(gridss_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","coma","strand1","strand2","SVtype","sample") 
-#chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
-
-#gridss_illu_good_ch<-gridss_illu_good[(gridss_illu_good$chromA %in% pan_chroms) & (gridss_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
-gridss_illu_good_ch<-subset(gridss_illu_good,chromA %in% pan_chroms & chromB %in% pan_chroms)
-
-### find overlaps between GRIDSS and PacBio panel
- 
 
 for(ss in 1:length(samples)){
   
@@ -206,7 +211,7 @@ for(ss in 1:length(samples)){
 
     chroms<-unique(focal_panel$chromA)
     
-    out_res_chrom<-NULL
+    out_res_chrom_gridss<-NULL
     for(ii in 1:length(chroms)){
         #for(ii in 1:20){
 
@@ -230,18 +235,26 @@ for(ss in 1:length(samples)){
         setkey(focal_gridss_chrom, chromA,startA,startB)
         setkey(focal_panel_chrom, chromA,startA,startB)
 
-        overlaps<-data.frame(foverlaps(focal_caller_chrom, focal_panel_chrom, type="any"))
+        overlaps_gridss<-data.frame(foverlaps(focal_gridss_chrom, focal_panel_chrom, type="any"))
         #overlaps_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>% 
-        overlaps_matchSV<-overlaps %>% 
-           drop_na()
+        overlaps_matchSV_gridss<-overlaps_gridss %>% 
+           drop_na() %>% 
+           mutate(start_diff = abs(startA-i.startA), end_diff = abs(startB-i.startB)) %>% 
+           filter(start_diff <=50 & end_diff <=50) %>% 
+           dplyr::select(chromA ,startA ,startB,SVtype ,i.startA ,i.startB ,sample, start_diff ,end_diff) %>% 
+           filter(!(SVtype=="INS"))                 ## IMPORTANT NOTE: temoparily filter out INS for cell lines ##
 
-        perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
+        colnames(overlaps_matchSV_gridss)<-c("chrom","panel_start","panel_end","SV_type","short_read_caller_start","short_read_caller_end","sample_caller", "start_diff", "end_diff")
+
+
+
+        #perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
 
 
            ### rbind chroms
-       if (nrow(perfect_match)>0) {
+       if (nrow( overlaps_matchSV_gridss)>0) {
 
-            out_res_chrom<-rbind(perfect_match,out_res_chrom) 
+             out_res_chrom_gridss<-rbind(overlaps_matchSV_gridss, out_res_chrom_gridss) 
 
 
        } ## if loop 
@@ -249,38 +262,38 @@ for(ss in 1:length(samples)){
 
     }  ### chrom loop 
 
-}    
+    write.table(out_res_chrom, file =paste("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/outputs-celllines_pacbiopanel_ovelap_resequenced_illumina_full_partial_overlap/out_res_PacBio_pannel_overlap_resequenced_illumina_",samples[ss],"_gridss_full_partial_50base.table", sep = ""), col.names = TRUE, row.names = FALSE, sep = "\t",quote = FALSE)
 
-out_res_chrom<-out_res_chrom[,c(1,2,3,4,5,6,8)]
-write.table(out_res_chrom, file ="~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/outputs/out_res_longread_pannel_resequenced_short_read_SW_Gridss.table", col.names = TRUE, row.names = FALSE, sep = "\t",quote = FALSE)
+
+}    
 
 
 #########################
 ##################
 ### from here ###
 ### create matrix
-results_out <- array (NA, c((nrow (input_good) * (end1 - start1 + 1)),7))
-count <- 0
+#results_out <- array (NA, c((nrow (input_good) * (end1 - start1 + 1)),7))
+#count <- 0
 
-system.time(
-#loop through focal snp
-for (i in start1:end1){
-	
+#system.time(
+##loop through focal snp
+#for (i in start1:end1){
+#	
 #	loop through all SNPs
-	for (j in 1:nrow (input_good)){
-		count <- count + 1
-		 results_out[count,7] <- cor (input_good[i,], input_good[j,], use = "pairwise.complete.obs")
-		results_out [count,1] <- scafpos_good[i,1]
-		results_out [count,2] <- scafpos_good[i,2]
-		#results_out [count,3] <- scafpos_good[i,3]
-		results_out [count,4] <- scafpos_good[j,1]
-		results_out [count,5] <- scafpos_good[j,2]
-		#results_out [count,6] <- scafpos_good[j,3]
-	
-	}
-}
-)
+#	for (j in 1:nrow (input_good)){
+#		count <- count + 1
+#		 results_out[count,7] <- cor (input_good[i,], input_good[j,], use = "pairwise.complete.obs")
+#		results_out [count,1] <- scafpos_good[i,1]
+#		results_out [count,2] <- scafpos_good[i,2]
+#		#results_out [count,3] <- scafpos_good[i,3]
+#		results_out [count,4] <- scafpos_good[j,1]
+#		results_out [count,5] <- scafpos_good[j,2]
+#		#results_out [count,6] <- scafpos_good[j,3]
+#	
+#	}
+#}
+#)
 
 
-outname <- paste ("output", start1,"_",end1,".txt",sep = "")
-write.table (results_out, outname, col.names = F, row.names = F, quote = F)
+#outname <- paste ("output", start1,"_",end1,".txt",sep = "")
+#write.table (results_out, outname, col.names = F, row.names = F, quote = F)
