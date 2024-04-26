@@ -1,6 +1,6 @@
 
 
-### find intersection between selected panel from longread and short read SV
+### find intersection between selected panel from longread and short read SV ##
 rm(list = ls())
 
 ### load required libraries
@@ -9,10 +9,8 @@ library(dplyr)
 #library(vcfR)
 #library(StructuralVariantAnnotation)
 #library(plyr)
-#library(UpSetR)
 library(tidyr)
 library(data.table)
-
 
 
 ############################################################
@@ -161,9 +159,6 @@ for(ss in 1:length(samples)){
            filter(start_diff <=50 & end_diff <=50) %>% 
            dplyr::select(chromA,startA,startB,SVtype,i.startA,i.startB,sample_caller,start_diff,end_diff)
         colnames(overlaps_full_partial_matchSV)<-c("chrom","panel_start","panel_end","SV_type","short_read_caller_start","short_read_caller_end","sample_caller", "start_diff", "end_diff")
-
-
-
 
         #perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
 
