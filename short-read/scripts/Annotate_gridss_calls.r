@@ -24,6 +24,12 @@ info(header(vcf)) = unique(as(rbind(as.data.frame(info(header(vcf))), data.frame
 	Type=c("String"),
 	Description=c("Simple event type annotation based purely on breakend position and orientation."))), "DataFrame"))
 gr <- breakpointRanges(vcf)
+
+### error message pops up: Warning message:
+#In .breakpointRanges(x, ...) : Removing 12 unpaired breakend variants.
+## Use inferMissingBreakends=TRUE to recover with inferred partner breakends.
+#gr <- breakpointRanges(vcf,inferMissingBreakends=TRUE)
+ 
 svtype <- simpleEventType(gr)
 info(vcf)$SIMPLE_TYPE <- NA_character_
 info(vcf[gr$sourceId])$SIMPLE_TYPE <- svtype
