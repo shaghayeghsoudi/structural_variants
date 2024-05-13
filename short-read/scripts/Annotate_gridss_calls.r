@@ -17,7 +17,8 @@ simpleEventType <- function(gr) {
           "DUP")))))
 }
 # using the example in the GRIDSS /example directory
-vcf <- readVcf("gridss.full.chr12.1527326.DEL1024.vcf", "hg19")        ##### NOTE: change here based on the name of your vcf file
+root<-"~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/gridss/"
+vcf <- readVcf(paste(root,"GCT_gridss.filter.pass.vcf", sep = ""), "hg19")         ##### NOTE: change here based on the name of your vcf file
 info(header(vcf)) = unique(as(rbind(as.data.frame(info(header(vcf))), data.frame(
 	row.names=c("SIMPLE_TYPE"),
 	Number=c("1"),
