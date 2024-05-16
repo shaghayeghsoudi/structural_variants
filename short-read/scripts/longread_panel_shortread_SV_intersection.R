@@ -53,7 +53,7 @@ pan_chroms<-unique(c(pan_good$ChrA ,pan_good$ChrB))  ### unique chromosmes prese
 ### load bedpe files (detected by just gridss) ###
 ###################################################
 
-gridss_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/gridss",pattern = "*.bedpe", full.names= TRUE) 
+gridss_file<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/gridss/gridss_annotated_bed_1index",pattern = "*.bed", full.names= TRUE) 
 
 gridss<-lapply(gridss_file, function(x){
 
@@ -68,16 +68,23 @@ gridss_illu<-do.call("rbind",gridss)
 names(gridss_illu)[length(names(gridss_illu))]<-"path"
 
 gridss_illu_good<-gridss_illu%>% 
-    mutate(sample_caller=sub('.*/\\s*', '', gsub("_survivor.bedpe","",path)), )  %>% 
+    mutate(sample_caller=sub('.*/\\s*', '', gsub(".annotated.simple.bed","",path)), )  %>% 
     dplyr::select(!(path)) %>% 
     mutate(sample=gsub("_.*$","",sample_caller)) %>% 
+    dplyr::select(c(V1:V5,sample))
     #mutate(sample=gsub("_.*$","",sample_caller)) %>% 
-    dplyr::mutate(across(V2:V3,~.-1),across(V5:V6,~.-1)) 
+    #dplyr::mutate(across(V2:V3,~.-1),across(V5:V6,~.-1)) 
     #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
+colnames(gridss_illu_good) <- c("chromA","startA","endA","SVType","QUAL", "sample") 
 
-colnames(gridss_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","coma","strand1","strand2","SVtype","sample_caller","sample") 
-gridss_illu_good_ch<-subset(gridss_illu_good,chromA %in% pan_chroms & chromB %in% pan_chroms)
 
+### duplicates columns to match for datatable
+gridss_illu_good_duplicated<-gridss_illu_good %>% 
+    mutate(chromB = chromA, startB= startA, endB=endA)
+
+gridss_illu_good_duplicated <- gridss_illu_good_duplicated[,c("chromA","startA","endA","chromB","startB","endB","SVType","QUAL", "sample")]
+
+gridss_illu_good_ch<-subset(gridss_illu_good_duplicated,chromA %in% pan_chroms & chromB %in% pan_chroms)
    
 ################################################################################################################
 ### load bedpe files (variants detected by each short read SV caller on re-sequenced cell lines/patient data) ###
@@ -104,7 +111,9 @@ beds_illu_good<-beds_illu%>%
     dplyr::mutate(across(V2:V3,~.-1),across(V5:V6,~.-1)) 
     #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
    
-    
+
+
+
 colnames(beds_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","strand1","strand2","SVtype","sample_caller","sample") 
 #chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
@@ -190,7 +199,10 @@ for(ss in 1:length(samples)){
     ## SV callers from resequenced 
     focal_girdss<-gridss_illu_good_ch %>% 
     filter(sample==samples[ss]) %>% 
-    dplyr::select(chromA,startA,startB,SVtype,sample)
+    #dplyr::select(chromA,startA,startB,SVtype,sample)
+    dplyr::select(chromA,startA,startB,SVType,sample) %>% 
+    mutate(sample = paste(sample,"gridss", sep = "_"))
+
     #setDT(focal_caller_format)
     #setkey(focal_caller_format, chrom1,start1,start2)
     
@@ -199,7 +211,7 @@ for(ss in 1:length(samples)){
     filter(sample==samples[ss]) %>% 
     dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype) 
 
-    colnames(focal_panel)<-c("chromA","startA","startB","SVtype")
+    colnames(focal_panel)<-c("chromA","startA","startB","SVType")
     
     #rename_with(pan_good_ch, recode, ChrA = "chrom1",ChrPosA ="start1" ,  ChrPosB="start2" , SVtype= "SVtype")  ### fix renames
 
@@ -210,13 +222,11 @@ for(ss in 1:length(samples)){
     for(ii in 1:length(chroms)){
         #for(ii in 1:20){
 
-        ## SV caller,, gridss
          focal_gridss_chrom<-focal_girdss %>%
          #filter(chromA ==chroms[ii] & SVtype != "TRA") %>%  ### tTO FIX: emporarily skip TRA
          filter(chromA ==chroms[ii]) %>% 
          filter(!(startB < startA))              ### tTO FIX: emporarily skip TRA
          
-           
         ## PacBio panel
         focal_panel_chrom<-focal_panel %>% 
          filter(chromA ==chroms[ii])%>%  ### tTO FIX: emporarily skip TRA
@@ -226,30 +236,30 @@ for(ss in 1:length(samples)){
         setDT(focal_gridss_chrom)
         setDT(focal_panel_chrom)
 
-        
         setkey(focal_gridss_chrom, chromA,startA,startB)
         setkey(focal_panel_chrom, chromA,startA,startB)
 
         overlaps_gridss<-data.frame(foverlaps(focal_gridss_chrom, focal_panel_chrom, type="any"))
-        #overlaps_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>% 
         overlaps_matchSV_gridss<-overlaps_gridss %>% 
-           drop_na() %>% 
-           mutate(start_diff = abs(startA-i.startA), end_diff = abs(startB-i.startB)) %>% 
-           filter(start_diff <=50 & end_diff <=50) %>% 
-           dplyr::select(chromA ,startA ,startB,SVtype ,i.startA ,i.startB ,sample, start_diff ,end_diff) %>% 
-           filter(!(SVtype=="INS"))                 ## IMPORTANT NOTE: temoparily filter out INS for cell lines ##
+        drop_na() %>% 
+        mutate(start_diff = abs(startA-i.startA), end_diff = abs(startB-i.startB)) 
+        
+        others<-overlaps_matchSV_gridss %>% 
+        filter(!(SVType == "INS") & SVType==i.SVType &start_diff <=50 & end_diff <=50)
 
-        colnames(overlaps_matchSV_gridss)<-c("chrom","panel_start","panel_end","SV_type","short_read_caller_start","short_read_caller_end","sample_caller", "start_diff", "end_diff")
+           
+       just_ins<-overlaps_matchSV_gridss %>% 
+       filter(SVType=="INS" & start_diff <=50 & SVType==i.SVType )
 
+       all_types<-rbind(others,just_ins)
 
-
-        #perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
+        #colnames(overlaps_matchSV_gridss)<-c("chrom","panel_start","panel_end","SV_type","short_read_caller_start","short_read_caller_end","sample_caller", "start_diff", "end_diff")
 
 
            ### rbind chroms
-       if (nrow( overlaps_matchSV_gridss)>0) {
+       if (nrow( all_types)>0) {
 
-             out_res_chrom_gridss<-rbind(overlaps_matchSV_gridss, out_res_chrom_gridss) 
+             out_res_chrom_gridss<-rbind(all_types, out_res_chrom_gridss) 
 
 
        } ## if loop 
