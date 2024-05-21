@@ -19,6 +19,17 @@ library(VariantAnnotation)
 files_survivor<-list.files("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines/panel/survivor_1matched_SVLEN100_DIS100/vcfs", pattern = "*_illumina_SVLEN100_DIS100_1caller.vcf", full.names = TRUE)
 
 ### lead rowranges field
+#var_vcf<-function(x){
+#     vcf<-readVcf(x)
+#     #info(readVcf(x))
+#     vcf_row<-data.frame(rowRanges(vcf))
+#}
+#
+#lapply(files_survivor,var_vcf)
+
+##############################
+### extract "info" columns ###
+##############################
 vcfs_survivor<-lapply(files_survivor,function(x){
      vcf<-readVcf(x)
      #info(readVcf(x))
