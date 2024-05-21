@@ -80,9 +80,10 @@ colnames(gridss_illu_good) <- c("chromA","startA","endA","SVType","QUAL", "sampl
 
 ### duplicates columns to match for datatable
 gridss_illu_good_duplicated<-gridss_illu_good %>% 
-    mutate(chromB = chromA, startB= startA, endB=endA)
-
-gridss_illu_good_duplicated <- gridss_illu_good_duplicated[,c("chromA","startA","endA","chromB","startB","endB","SVType","QUAL", "sample")]
+    mutate(chromB = chromA, startB= startA, endB=endA) %>% 
+    mutate(uniq_identifier=paste(sample,SVType,chromA,startA,chromB,endB, sep = "_"))%>% 
+    mutate(sample_caller = paste(sample,"gridss",sep ="_"))
+gridss_illu_good_duplicated <- gridss_illu_good_duplicated[,c("chromA","startA","endA","chromB","startB","endB","SVType","QUAL", "sample","uniq_identifier","sample_caller")]
 
 gridss_illu_good_ch<-subset(gridss_illu_good_duplicated,chromA %in% pan_chroms & chromB %in% pan_chroms)
    
@@ -108,18 +109,21 @@ beds_illu_good<-beds_illu%>%
     mutate(sample_caller=sub('.*/\\s*', '', gsub("_survivor.bedpe","",path)), )  %>% 
     dplyr::select(-c(path,V8)) %>% 
     mutate(sample=gsub("_.*$","",sample_caller)) %>% 
-    dplyr::mutate(across(V2:V3,~.-1),across(V5:V6,~.-1)) 
+    dplyr::mutate(across(V2:V3,~.-1),across(V5:V6,~.-1)) %>% 
+    mutate(uniq_identifier=paste(sample,V11,V1,V2,V4,V5, sep = "_"))
     #mutate(unique_id =paste(sample,V11, sep = "_"))  ### V11 is the SV type
    
 
 
 
-colnames(beds_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","strand1","strand2","SVtype","sample_caller","sample") 
+colnames(beds_illu_good) <- c("chromA","startA","endA","chromB","startB","endB","typeID","strand1","strand2","SVtype","sample_caller","sample","uniq_identifier") 
+
 #chroms_good<-c(paste("chr",seq(1:22),sep=""),"chrX","chrY")
 
 #beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chromA %in% pan_chroms) & (beds_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
 beds_illu_good_ch<-subset(beds_illu_good,chromA %in% pan_chroms & chromB %in% pan_chroms)
 
+##################
 ### find overlaps     
 samples<-unique(pan_good$sample)  ### what are the samples in the panel 
 
