@@ -123,8 +123,10 @@ colnames(beds_illu_good) <- c("chromA","startA","endA","chromB","startB","endB",
 #beds_illu_good_ch<-beds_illu_good[(beds_illu_good$chromA %in% pan_chroms) & (beds_illu_good$chromB %in% pan_chroms),]  ### remove unplaced scaffolds
 beds_illu_good_ch<-subset(beds_illu_good,chromA %in% pan_chroms & chromB %in% pan_chroms)
 
-##################
-### find overlaps     
+##########################################################################
+### find overlaps  between long read panel and short read resequenced ####
+##########################################################################
+
 samples<-unique(pan_good$sample)  ### what are the samples in the panel 
 
 
@@ -133,34 +135,45 @@ for(ss in 1:length(samples)){
     ## SV callers from resequenced 
     focal_caller<-beds_illu_good_ch %>% 
     filter(sample==samples[ss]) %>% 
-    dplyr::select(chromA,startA,startB,SVtype,sample_caller)
+    dplyr::select(chromA,startA,startB,SVtype,sample_caller,uniq_identifier)
     #setDT(focal_caller_format)
     #setkey(focal_caller_format, chrom1,start1,start2)
     
     ## longread panel
     focal_panel<-pan_good %>% 
     filter(sample==samples[ss]) %>% 
-    dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype) 
-    colnames(focal_panel)<-c("chromA","startA","startB","SVtype")
+    dplyr::select(ChrA,ChrPosA,ChrPosB,SVtype,uniq_identifier) 
+    colnames(focal_panel)<-c("chromA","startA","startB","SVtype","uniq_identifier")
     
     #rename_with(pan_good_ch, recode, ChrA = "chrom1",ChrPosA ="start1" ,  ChrPosB="start2" , SVtype= "SVtype")  ### fix renames
+    
     chroms<-unique(focal_panel$chromA)
     
     out_res_chrom<-NULL
     for(ii in 1:length(chroms)){
-        #for(ii in 1:20){
+        #for(ii in 1:18){
 
         ## SV caller
         focal_caller_chrom<-focal_caller %>%
         filter(chromA ==chroms[ii] & SVtype != "TRA") %>%   ### toDO FIX: emporarily skip TRA
         filter(!(startB < startA))    
-        setDT(focal_caller_chrom)                      ### toDO FIX: emporarily skip TRA
+        setDT(focal_caller_chrom) 
+        
+
+         focal_caller_chrom_tra<-  focal_caller %>%  ### just TRA
+        filter(chromA ==chroms[ii] & SVtype == "TRA")          
          
         ## panel
         focal_panel_chrom<-focal_panel %>% 
         filter(chromA ==chroms[ii] & SVtype != "TRA")%>%  ### tTO FIX: emporarily skip TRA
         filter(!(startB < startA))
         setDT(focal_panel_chrom)
+
+
+        focal_panel_tra<-  focal_panel %>%  ### just TRA
+        filter(chromA ==chroms[ii] & SVtype == "TRA")  
+
+        
 
         setkey(focal_caller_chrom, chromA,startA,startB)
         setkey(focal_panel_chrom, chromA,startA,startB)
@@ -169,17 +182,45 @@ for(ss in 1:length(samples)){
         overlaps_full_partial_matchSV<-overlaps[overlaps$SVtype == overlaps$i.SVtype,] %>%   ### match in SV type between panel and resequenced variants
            drop_na() %>% 
            mutate(start_diff = abs(startA-i.startA), end_diff = abs(startB-i.startB)) %>% 
-           filter(start_diff <=50 & end_diff <=50) %>% 
-           dplyr::select(chromA,startA,startB,SVtype,i.startA,i.startB,sample_caller,start_diff,end_diff)
-        colnames(overlaps_full_partial_matchSV)<-c("chrom","panel_start","panel_end","SV_type","short_read_caller_start","short_read_caller_end","sample_caller", "start_diff", "end_diff")
+           mutate(short_read_caller_chrom=chromA) %>% 
+           dplyr::select(chromA,startA,startB,SVtype,short_read_caller_chrom,i.startA,i.startB,i.SVtype,sample_caller,start_diff,end_diff) 
+
+
+            #colnames(overlaps_full_partial_matchSV)<-c("chrom","panel_start","panel_end","SV_type","short_read_caller_start","short_read_caller_end","sample_caller", "start_diff", "end_diff")
+        others<-overlaps_full_partial_matchSV %>% 
+        filter(!(SVtype == "INS") & SVtype==i.SVtype &start_diff <=50 & end_diff <=50)
+
+           
+       just_ins<-overlaps_full_partial_matchSV %>% 
+       filter(SVtype=="INS" & start_diff <=50 & SVtype==i.SVtype )
+
+       all_types<-rbind(others,just_ins) ### INS, DEL, DUP, INV
+       all_types<-all_types[,c("chromA",   "startA" , "startB" ,"SVtype"  ,   "short_read_caller_chrom", "i.startA" ,"i.startB", "i.SVtype" ,"sample_caller" ,"start_diff", "end_diff")]
+       colnames(all_types)<-c("panel_chrom","panel_start","panel_end","panel_SV_type","short_read_caller_chrom","short_read_caller_start","short_read_caller_end","short_red_caller_SV_type","sample_caller" ,"start_diff", "end_diff")
+        
+        ####################################
+        ### join TRA panel and illumina ####
+        ####################################
+        join_tra<-merge(focal_panel_tra,focal_caller_chrom_tra,by.x = "uniq_identifier", by.y ="uniq_identifier" )
+        join_tra
+        if (nrow(join_tra > 0)){
+
+           join_tra<-join_tra[,c("chromA.x","startA.x", "startB.x", "SVtype.x" ,"chromA.y" , "startA.y","startB.y", "SVtype.y","sample_caller")]
+           colnames(join_tra)<-c("panel_chrom","panel_start","panel_end","panel_SV_type","short_read_caller_chrom","short_read_caller_start","short_read_caller_end","short_red_caller_SV_type","sample_caller")
+           join_tra$start_diff<-0
+           join_tra$end_diff<-0
+        }
+
+         tra_overlaps_full_partial_matchSV<-rbind(all_types,join_tra)
+        
 
         #perfect_match<-overlaps_matchSV[overlaps_matchSV$startA==overlaps_matchSV$i.startA & overlaps_matchSV$startB==overlaps_matchSV$i.startB,]   
 
 
            ### rbind chroms
-       if (nrow(overlaps_full_partial_matchSV)>0) {
+       if (nrow(tra_overlaps_full_partial_matchSV)>0) {
 
-            out_res_chrom<-rbind(overlaps_full_partial_matchSV,out_res_chrom) 
+            out_res_chrom<-rbind(tra_overlaps_full_partial_matchSV,out_res_chrom) 
 
 
        } ## if loop 
@@ -204,7 +245,7 @@ for(ss in 1:length(samples)){
     focal_girdss<-gridss_illu_good_ch %>% 
     filter(sample==samples[ss]) %>% 
     #dplyr::select(chromA,startA,startB,SVtype,sample)
-    dplyr::select(chromA,startA,startB,SVType,sample) %>% 
+    dplyr::select(chromA,startA,endA,SVType,sample) %>% 
     mutate(sample = paste(sample,"gridss", sep = "_"))
 
     #setDT(focal_caller_format)
@@ -229,8 +270,9 @@ for(ss in 1:length(samples)){
          focal_gridss_chrom<-focal_girdss %>%
          #filter(chromA ==chroms[ii] & SVtype != "TRA") %>%  ### tTO FIX: emporarily skip TRA
          filter(chromA ==chroms[ii]) %>% 
-         filter(!(startB < startA))              ### tTO FIX: emporarily skip TRA
+         filter(!(startA > endA))              ### tTO FIX: emporarily skip TRA
          
+        
         ## PacBio panel
         focal_panel_chrom<-focal_panel %>% 
          filter(chromA ==chroms[ii])%>%  ### tTO FIX: emporarily skip TRA
@@ -240,13 +282,17 @@ for(ss in 1:length(samples)){
         setDT(focal_gridss_chrom)
         setDT(focal_panel_chrom)
 
-        setkey(focal_gridss_chrom, chromA,startA,startB)
+        setkey(focal_gridss_chrom, chromA,startA,endA)
         setkey(focal_panel_chrom, chromA,startA,startB)
 
         overlaps_gridss<-data.frame(foverlaps(focal_gridss_chrom, focal_panel_chrom, type="any"))
+        #overlaps_gridss<-overlaps_gridss[overlaps_gridss$SVtype == overlaps_gridss$i.SVtype,]
+
+
         overlaps_matchSV_gridss<-overlaps_gridss %>% 
         drop_na() %>% 
-        mutate(start_diff = abs(startA-i.startA), end_diff = abs(startB-i.startB)) 
+        mutate(start_diff = abs(startA-i.startA), end_diff = abs(startB-endA)) 
+
         
         others<-overlaps_matchSV_gridss %>% 
         filter(!(SVType == "INS") & SVType==i.SVType &start_diff <=50 & end_diff <=50)
@@ -271,15 +317,14 @@ for(ss in 1:length(samples)){
 
     }  ### chrom loop 
 
-    write.table(out_res_chrom, file =paste("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/outputs-celllines_pacbiopanel_ovelap_resequenced_illumina_full_partial_overlap/out_res_PacBio_pannel_overlap_resequenced_illumina_",samples[ss],"_gridss_full_partial_50base.table", sep = ""), col.names = TRUE, row.names = FALSE, sep = "\t",quote = FALSE)
+    write.table(out_res_chrom_gridss, file =paste("~/Dropbox/cancer_reserach/sarcoma/sarcoma_analysis/short_reads_SV/cell_lines_resequenced/pacbio_resequenced_short_read/outputs-celllines_pacbiopanel_ovelap_resequenced_illumina_full_partial_overlap/out_res_PacBio_pannel_overlap_resequenced_illumina_",samples[ss],"_gridss_full_partial_50base.table", sep = ""), col.names = TRUE, row.names = FALSE, sep = "\t",quote = FALSE)
 
 
 }    
 
 
 #########################
-##################
-### from here ###
+###############
 ### create matrix
 #results_out <- array (NA, c((nrow (input_good) * (end1 - start1 + 1)),7))
 #count <- 0
